@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>אתגר האלומה — BeamChallenge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0f1e;
+      color: #e0e8f0;
+      font-family: system-ui, -apple-system, Arial, sans-serif;
+      direction: rtl;
+      overflow: hidden;
+      height: 100vh;
+      user-select: none;
+    }
+    #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+    /* Orbit canvas area */
+    #orbit-canvas-wrap {
+      position: relative;
+      width: min(90vw, 520px);
+      height: min(90vw, 520px);
+      max-height: 70vh;
+    }
+    svg#orbit-svg { width: 100%; height: 100%; }
+
+    /* Info panel */
+    #info-panel {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(10,20,40,0.9);
+      border: 1px solid rgba(0,184,212,0.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      max-width: 200px;
+      backdrop-filter: blur(8px);
+    }
+    #info-panel h3 { color: #00b8d4; font-size: 0.9rem; margin-bottom: 8px; }
+    #info-season { font-size: 1rem; font-weight: 700; color: #ff8c42; margin: 6px 0; }
+    #info-desc   { color: #8aa4c0; line-height: 1.5; }
+
+    /* Challenge list */
+    #challenges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 12px;
+      max-width: 560px;
+    }
+    .ch-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      color: #8aa4c0;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .ch-btn.active { border-color: #00b8d4; color: #e0e8f0; background: rgba(0,184,212,0.12); }
+    .ch-btn.done   { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.08); }
+
+    /* Title */
+    #title-bar {
+      text-align: center;
+      padding: 8px;
+    }
+    #title-bar h1 { font-size: 1rem; color: #00b8d4; }
+    #title-bar p  { font-size: 0.8rem; color: #8aa4c0; margin-top: 2px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="title-bar">
+    <h1>🎯 אתגר האלומה — BeamChallenge</h1>
+    <p>לחצו על נקודה במסלול כדי למקם את כדור הארץ</p>
+  </div>
+
+  <div id="orbit-canvas-wrap">
+    <svg id="orbit-svg" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Earth gradient -->
+        <radialGradient id="earthG" cx="38%" cy="32%" r="68%">
+          <stop offset="0%"   stop-color="#4a9fd4"/>
+          <stop offset="50%"  stop-color="#1e5fa8"/>
+          <stop offset="100%" stop-color="#0a2844"/>
+        </radialGradient>
+        <!-- Sun gradient -->
+        <radialGradient id="sunG" cx="40%" cy="35%" r="60%">
+          <stop offset="0%"   stop-color="#fff5a0"/>
+          <stop offset="60%"  stop-color="#ffcc33"/>
+          <stop offset="100%" stop-color="#ff8800"/>
+        </radialGradient>
+        <!-- Sun glow filter -->
+        <filter id="sunGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <!-- Earth glow -->
+        <filter id="earthGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <!-- Beam gradient -->
+        <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#ffcc33" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#ffcc33" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Stars -->
+      <g id="stars-layer" opacity="0.6"></g>
+
+      <!-- Orbit ellipse -->
+      <ellipse id="orbit-ellipse" cx="260" cy="260" rx="200" ry="160"
+               fill="none" stroke="rgba(0,184,212,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- Orbit position markers -->
+      <g id="orbit-markers"></g>
+
+      <!-- Sun beams (background layer) -->
+      <g id="beams-group"></g>
+
+      <!-- Sun -->
+      <circle cx="260" cy="260" r="38" fill="#ffcc33" opacity="0.15" filter="url(#sunGlow)"/>
+      <circle cx="260" cy="260" r="30" fill="url(#sunG)" filter="url(#sunGlow)"/>
+      <text x="260" y="308" text-anchor="middle" fill="#ffcc33" font-size="11" opacity="0.7">שמש</text>
+
+      <!-- Ecliptic plane line -->
+      <line x1="60" y1="260" x2="460" y2="260" stroke="rgba(200,200,255,0.1)" stroke-width="1" stroke-dasharray="6,4"/>
+
+      <!-- Earth group -->
+      <g id="earth-group" transform="translate(460,260)">
+        <!-- Tilt axis (fixed direction — toward Polaris) -->
+        <line id="tilt-axis" x1="0" y1="-45" x2="0" y2="45"
+              stroke="rgba(255,210,96,0.7)" stroke-width="1.4" stroke-dasharray="4,3"/>
+        <circle id="npole-dot" cx="0" cy="-40" r="2.5" fill="#ffd060"/>
+        <text id="npole-label" x="0" y="-46" text-anchor="middle" fill="#ffd060" font-size="10" font-weight="bold">N</text>
+        <!-- Earth body -->
+        <circle r="30" fill="url(#earthG)" filter="url(#earthGlow)"/>
+        <!-- Continents (simplified blobs) -->
+        <ellipse cx="-4" cy="-8" rx="10" ry="7"  fill="#2d8a3e" opacity="0.8"/>
+        <ellipse cx="5"  cy="4"  rx="7"  ry="10" fill="#2d8a3e" opacity="0.8"/>
+        <ellipse cx="-10" cy="8" rx="6"  ry="4"  fill="#2d8a3e" opacity="0.7"/>
+        <!-- Ice caps -->
+        <ellipse cx="0" cy="-28" rx="12" ry="5" fill="white" opacity="0.8"/>
+        <ellipse cx="0" cy="28"  rx="10" ry="4" fill="white" opacity="0.8"/>
+        <!-- Equator line (updated dynamically to be perpendicular to tilt axis) -->
+        <line id="equator-line" x1="-30" y1="0" x2="30" y2="0" stroke="rgba(255,80,80,0.7)" stroke-width="1.5"/>
+        <!-- Night side overlay -->
+        <path id="night-side" d="M 0,-30 A 30,30 0 0,0 0,30 Z"
+              fill="rgba(0,0,20,0.55)"/>
+        <!-- Season label -->
+        <text id="earth-label" x="0" y="-38" text-anchor="middle" fill="#00b8d4" font-size="11" font-weight="bold"></text>
+      </g>
+    </svg>
+
+    <!-- Info panel -->
+    <div id="info-panel">
+      <h3>מידע</h3>
+      <div id="info-season">—</div>
+      <div id="info-desc">לחצו על נקודה במסלול למיקום כדור הארץ</div>
+    </div>
+  </div>
+
+  <!-- Challenge buttons -->
+  <div id="challenges">
+    <button class="ch-btn active" data-ch="0" onclick="setChallenge(0)">🎯 חופשי</button>
+    <button class="ch-btn"        data-ch="1" onclick="setChallenge(1)">☀️ קיץ צפוני</button>
+    <button class="ch-btn"        data-ch="2" onclick="setChallenge(2)">❄️ חורף צפוני</button>
+    <button class="ch-btn"        data-ch="3" onclick="setChallenge(3)">🌱 שוויון</button>
+    <button class="ch-btn"        data-ch="4" onclick="setChallenge(4)">🍂 שוויון ב׳</button>
+  </div>
+</div>
+
+<script>
+  const CX = 260, CY = 260, RX = 200, RY = 160;
+  const TILT = -23.5 * Math.PI / 180;
+  const AX23 = 23.5 * Math.PI / 180; // fixed axial tilt — axis always points the SAME way (upper-right)
+  const NUM_MARKERS = 12;
+  const SEASONS = [
+    { angle: 0,   name: 'ינואר — חורף צפוני',     desc: 'חצי הכדור הצפוני רחוק מהשמש. חורף בישראל.',        beam: 'south' },
+    { angle: 30,  name: 'פברואר',                  desc: 'חצי הכדור הצפוני מתחיל להתקרב.',                   beam: 'south' },
+    { angle: 60,  name: 'מרץ — שוויון אביב',       desc: 'שוויון: 12 שעות אור בכל מקום.',                    beam: 'equator' },
+    { angle: 90,  name: 'אפריל',                   desc: 'חצי הכדור הצפוני מתחמם.',                          beam: 'north' },
+    { angle: 120, name: 'מאי',                     desc: 'מתקרבים לקיץ הצפוני.',                             beam: 'north' },
+    { angle: 150, name: 'יוני — קיץ צפוני',        desc: 'קיצה קיץ! חצי הכדור הצפוני בשיא הנטייה לשמש.',    beam: 'north' },
+    { angle: 180, name: 'יולי',                    desc: 'שיא הקיץ בצפון. שמש חצות בקוטב הצפוני.',           beam: 'north' },
+    { angle: 210, name: 'אוגוסט',                  desc: 'קיץ בצפון — עדיין חם.',                            beam: 'north' },
+    { angle: 240, name: 'ספטמבר — שוויון סתיו',   desc: 'שוויון: 12 שעות אור בכל מקום שוב.',               beam: 'equator' },
+    { angle: 270, name: 'אוקטובר',                 desc: 'הצפון מתקרר, הדרום מתחמם.',                       beam: 'south' },
+    { angle: 300, name: 'נובמבר',                  desc: 'מתקרבים לחורף הצפוני.',                           beam: 'south' },
+    { angle: 330, name: 'דצמבר — קיצה חורף',       desc: 'קיצה חורף! הדרום בנטייה מרבית לשמש.',             beam: 'south' },
+  ];
+
+  const CHALLENGES = [
+    null,
+    { idx: 5,  correct: [5,6,7],  hint: 'מקמו בין אפריל ליולי', doneMsg: '✅ נכון! חצי הכדור הצפוני פונה לשמש' },
+    { idx: 11, correct: [0,1,11], hint: 'מקמו בין אוקטובר לינואר', doneMsg: '✅ נכון! חצי הכדור הדרומי פונה לשמש' },
+    { idx: 2,  correct: [2],      hint: 'מצאו את שוויון האביב', doneMsg: '✅ נכון! האלומה על קו המשווה' },
+    { idx: 8,  correct: [8],      hint: 'מצאו את שוויון הסתיו', doneMsg: '✅ נכון! שוויון הסתיו' },
+  ];
+
+  let currentMarker = 0;
+  let currentChallenge = 0;
+
+  function orbitPos(angleDeg) {
+    const a = angleDeg * Math.PI / 180;
+    return { x: CX + RX * Math.cos(a), y: CY - RY * Math.sin(a) };
+  }
+
+  function buildStars() {
+    const g = document.getElementById('stars-layer');
+    let h = '';
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * 520;
+      const y = Math.random() * 520;
+      const r = Math.random() * 1.2 + 0.3;
+      const op = Math.random() * 0.6 + 0.2;
+      h += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="white" opacity="${op.toFixed(2)}"/>`;
+    }
+    g.innerHTML = h;
+  }
+
+  function buildMarkers() {
+    const g = document.getElementById('orbit-markers');
+    let h = '';
+    for (let i = 0; i < NUM_MARKERS; i++) {
+      const s = SEASONS[i];
+      const p = orbitPos(s.angle);
+      h += `<circle class="orbit-marker" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"
+             r="8" fill="rgba(0,184,212,0.12)" stroke="rgba(0,184,212,0.4)" stroke-width="1.5"
+             style="cursor:pointer" onclick="selectMarker(${i})" data-idx="${i}"/>`;
+    }
+    g.innerHTML = h;
+  }
+
+  function updateEarth(idx) {
+    const s = SEASONS[idx];
+    const p = orbitPos(s.angle);
+    const eg = document.getElementById('earth-group');
+
+    /* Position */
+    eg.setAttribute('transform', `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+
+    /* Tilt axis — ALWAYS fixed: points upper-right at 23.5° (toward Polaris).
+       The axis keeps the SAME screen direction at every orbital position —
+       that fixed direction is exactly what creates the seasons. */
+    const axDirX = Math.sin(AX23), axDirY = -Math.cos(AX23); // N-pole end (upper-right, SVG y-down)
+    const tl = document.getElementById('tilt-axis');
+    tl.setAttribute('x1', (-axDirX * 40).toFixed(1));
+    tl.setAttribute('y1', (-axDirY * 40).toFixed(1));
+    tl.setAttribute('x2', ( axDirX * 40).toFixed(1));
+    tl.setAttribute('y2', ( axDirY * 40).toFixed(1));
+
+    /* North-pole marker follows the fixed axis direction */
+    const np = document.getElementById('npole-dot');
+    np.setAttribute('cx', (axDirX * 40).toFixed(1));
+    np.setAttribute('cy', (axDirY * 40).toFixed(1));
+    const npl = document.getElementById('npole-label');
+    npl.setAttribute('x', (axDirX * 47).toFixed(1));
+    npl.setAttribute('y', (axDirY * 47 + 3).toFixed(1));
+
+    /* Equator — perpendicular to the fixed tilt axis (a fixed 23.5° tilt) */
+    const eqDX = Math.cos(AX23), eqDY = Math.sin(AX23);
+    const eq = document.getElementById('equator-line');
+    eq.setAttribute('x1', ( eqDX * 30).toFixed(1));
+    eq.setAttribute('y1', ( eqDY * 30).toFixed(1));
+    eq.setAttribute('x2', (-eqDX * 30).toFixed(1));
+    eq.setAttribute('y2', (-eqDY * 30).toFixed(1));
+
+    /* Night side: always faces away from sun (sun is at CX,CY) */
+    const toSunAngle = Math.atan2(CY - p.y, CX - p.x);
+    const ns = document.getElementById('night-side');
+    const na = toSunAngle + Math.PI / 2;
+    ns.setAttribute('d', `M ${(Math.cos(toSunAngle + Math.PI) * 30).toFixed(1)},${(Math.sin(toSunAngle + Math.PI) * 30).toFixed(1)} A 30,30 0 0,0 ${(Math.cos(toSunAngle) * 30).toFixed(1)},${(Math.sin(toSunAngle) * 30).toFixed(1)} Z`);
+
+    /* Label */
+    document.getElementById('earth-label').textContent = '';
+
+    /* Draw beams */
+    drawBeams(p, s.beam);
+
+    /* Update info */
+    document.getElementById('info-season').textContent = s.name;
+    document.getElementById('info-desc').textContent   = s.desc;
+
+    /* Highlight active marker */
+    document.querySelectorAll('.orbit-marker').forEach((m, i) => {
+      m.setAttribute('fill', i === idx ? 'rgba(0,184,212,0.5)' : 'rgba(0,184,212,0.12)');
+      m.setAttribute('stroke', i === idx ? '#00b8d4' : 'rgba(0,184,212,0.4)');
+      m.setAttribute('r', i === idx ? '10' : '8');
+    });
+
+    /* Check challenge */
+    if (currentChallenge > 0) checkChallenge(idx);
+  }
+
+  function drawBeams(earthPos, beamType, axisAngle) {
+    const g = document.getElementById('beams-group');
+    let beams = '';
+    const numBeams = 9;
+    const spreadPx = 70;
+
+    /* Perpendicular to sun-earth vector */
+    const dx = earthPos.x - CX, dy = earthPos.y - CY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist, uy = dy / dist;
+    const px = -uy, py = ux; /* perpendicular */
+
+    for (let i = 0; i < numBeams; i++) {
+      const t = (i / (numBeams - 1)) - 0.5;
+      const offsetX = t * spreadPx * px;
+      const offsetY = t * spreadPx * py;
+      const startX = (CX + offsetX).toFixed(1);
+      const startY = (CY + offsetY).toFixed(1);
+      const endX   = (earthPos.x + offsetX * 0.4).toFixed(1);
+      const endY   = (earthPos.y + offsetY * 0.4).toFixed(1);
+
+      /* Color based on where beam hits */
+      let color = '#ffcc33';
+      let opacity = 0.5;
+      const absT = Math.abs(t);
+
+      if (beamType === 'north' && t < 0)          { color = '#ff4444'; opacity = 0.75; }
+      else if (beamType === 'south' && t > 0)     { color = '#4488ff'; opacity = 0.75; }
+      else if (beamType === 'equator' && absT < 0.15) { color = '#ff8c42'; opacity = 0.9; }
+      else { opacity = 0.25 + (0.5 - absT) * 0.3; }
+
+      beams += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}"
+                  stroke="${color}" stroke-width="${1.5 - absT}" opacity="${opacity}"/>`;
+    }
+    g.innerHTML = beams;
+  }
+
+  function selectMarker(idx) {
+    currentMarker = idx;
+    updateEarth(idx);
+  }
+
+  function setChallenge(ch) {
+    currentChallenge = ch;
+    document.querySelectorAll('.ch-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === ch);
+    });
+    if (ch > 0 && CHALLENGES[ch]) {
+      document.getElementById('info-desc').textContent = CHALLENGES[ch].hint;
+    }
+  }
+
+  function checkChallenge(idx) {
+    const ch = CHALLENGES[currentChallenge];
+    if (!ch) return;
+    if (ch.correct.includes(idx)) {
+      document.getElementById('info-desc').textContent = ch.doneMsg;
+      document.querySelector(`[data-ch="${currentChallenge}"]`).classList.add('done');
+    }
+  }
+
+  /* Init */
+  buildStars();
+  buildMarkers();
+  updateEarth(0);
+
+  /* Click on SVG orbit area */
+  document.getElementById('orbit-svg').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) / rect.width  * 520;
+    const sy = (e.clientY - rect.top)  / rect.height * 520;
+    /* Find nearest marker */
+    let best = 0, bestDist = Infinity;
+    SEASONS.forEach((s, i) => {
+      const p = orbitPos(s.angle);
+      const d = (sx - p.x) ** 2 + (sy - p.y) ** 2;
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    if (bestDist < 40 * 40) selectMarker(best);
+  });
+</script>
+</body>
+</html>

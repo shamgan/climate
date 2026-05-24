@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מסלול כדור הארץ — עונות השנה</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#07101f;
+  color:#f0f4f8;
+  font-family:system-ui,sans-serif;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  overflow:hidden;
+  padding:6px;
+}
+h2 { font-size:.88rem; color:#00b8d4; text-align:center; }
+canvas { display:block; cursor:pointer; max-width:100%; height:auto; }
+.ctrl-row {
+  display:flex; gap:8px; align-items:center; justify-content:center;
+  flex-wrap:wrap;
+}
+.btn {
+  background:rgba(0,184,212,.15);
+  border:1px solid rgba(0,184,212,.4);
+  color:#f0f4f8;
+  padding:5px 14px;
+  border-radius:6px;
+  font-size:.78rem;
+  cursor:pointer;
+}
+.btn:hover { background:rgba(0,184,212,.3); }
+.btn.active { background:rgba(0,184,212,.35); border-color:#00b8d4; }
+.insight {
+  font-size:.78rem;
+  color:#a8b8cc;
+  text-align:center;
+  max-width:480px;
+  line-height:1.5;
+  padding:0 8px;
+}
+.insight span { color:#00b8d4; font-weight:600; }
+</style>
+</head>
+<body>
+<h2>מסלול כדור הארץ — ציר קבוע, עונות משתנות</h2>
+
+<canvas id="cv" width="490" height="280"></canvas>
+
+<div class="ctrl-row">
+  <button class="btn active" id="btn-anim" onclick="toggleAnim()">⏸ עצור</button>
+  <button class="btn" onclick="jumpSeason(0)">☀️ קיץ צפוני</button>
+  <button class="btn" onclick="jumpSeason(1)">❄️ חורף צפוני</button>
+  <button class="btn" onclick="jumpSeason(2)">🌱 שוויון אביב</button>
+  <button class="btn" onclick="jumpSeason(3)">🍂 שוויון סתיו</button>
+</div>
+
+<div class="insight" id="insight-text">
+  <span>הציר תמיד מצביע לאותה נקודה בחלל</span> — לכוכב הצפון.
+  כשכדור הארץ בצד ימין של מסלולו, הצפון נוטה לשמש ← קיץ בצפון.
+</div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const W = 490, H = 280;
+
+// Orbit parameters (top-down view, Sun at center)
+const SX  = W / 2;   // Sun center X
+const SY  = H / 2;   // Sun center Y
+const ORX = 170;     // Orbit semi-major x
+const ORY = 115;     // Orbit semi-minor y (slightly elliptical)
+const ER  = 14;      // Earth radius
+
+// The axis always points "upward-left" in the diagram (toward Polaris projection)
+// The N-pole direction in orbital-plane coords: angle = 100° from +x axis
+// (i.e., roughly "10 o'clock" — upper-left)
+// In screen coords (y-flipped): angle = -100° = 260°
+// But simplifying: N pole always points at angle AXIS_ANGLE from vertical
+const AXIS_ANGLE_DEG = 23.5; // tilt from "up" (screen), toward right (upper-right = toward Polaris)
+const AXIS_ANGLE = AXIS_ANGLE_DEG * Math.PI / 180;
+
+// 4 key season positions (orbit angle in radians, 0 = right of Sun)
+// June solstice: Earth is where N pole (upper-left) is tilted TOWARD the Sun
+// If N pole = upper-left, Sun must be to Earth's upper-left → Earth at lower-right of orbit
+// → orbit angle ≈ 180° + 20° = 200° from standard right = ~200° → screen: lower-right
+// For clean positions:
+//   June (N summer):   orbit angle = 90° (bottom of orbit → Sun is above → N pole tilts up = toward Sun) ✓
+//   December (N winter): orbit angle = 270° (top of orbit)
+//   March equinox:     orbit angle = 0°  (right)
+//   September equinox: orbit angle = 180° (left)
+// Using AXIS straight UP (0°): N pole up, in June Earth below Sun → N toward Sun ✓
+
+const SEASONS = [
+  { angle: Math.PI/2,       name:'קיצה קיץ — 21 יוני',  label:'N summer', labelN:'☀️ קיץ',   labelS:'❄️ חורף', color:'#ff8c42', orbit:'תחתית המסלול' },
+  { angle: 3*Math.PI/2,     name:'קיצה חורף — 21 דצמבר',label:'N winter', labelN:'❄️ חורף', labelS:'☀️ קיץ',   color:'#4fc3f7', orbit:'צמרת המסלול' },
+  { angle: 0,               name:'שוויון אביב — 21 מרץ', label:'equinox',  labelN:'🌱 אביב', labelS:'🍂 סתיו',  color:'#66bb6a', orbit:'ימין המסלול' },
+  { angle: Math.PI,         name:'שוויון סתיו — 23 ספטמבר',label:'equinox',labelN:'🍂 סתיו', labelS:'🌸 אביב',  color:'#ffa726', orbit:'שמאל המסלול' },
+];
+
+const INSIGHTS = [
+  'בקיצת הקיץ — <span>הצפון נוטה לשמש</span>. היום הארוך ביותר בצפון. בדרום — חורף.',
+  'בקיצת החורף — <span>הדרום נוטה לשמש</span>. הלילה הארוך ביותר בצפון. אוסטרליה בקיץ!',
+  'בשוויון האביב — <span>הציר ניצב לשמש</span>. 12 שעות אור לכל נקודה על כדור הארץ.',
+  'בשוויון הסתיו — <span>שוב ניצב לשמש</span>. 12 שעות אור — אך הקיץ עוזב את הצפון.',
+];
+
+let orbitAngle = Math.PI / 2; // start at June
+let animating  = true;
+let currentSeason = 0;
+
+function orbitPos(angle) {
+  return {
+    x: SX + ORX * Math.cos(angle),
+    y: SY + ORY * Math.sin(angle),
+  };
+}
+
+// Draw a mini Earth at position (ex, ey) with given orbit angle
+function drawEarth(ex, ey, angle, highlight) {
+  // Determine which direction the Sun is (from Earth toward Sun)
+  const toSunX = SX - ex;
+  const toSunY = SY - ey;
+  const sunDist = Math.hypot(toSunX, toSunY);
+  const sunDirX = toSunX / sunDist;
+  const sunDirY = toSunY / sunDist;
+
+  // Lit side angle (in canvas coords)
+  const sunAngle = Math.atan2(sunDirY, sunDirX);
+
+  // Draw night side (full circle, dark)
+  ctx.beginPath();
+  ctx.arc(ex, ey, ER, 0, Math.PI * 2);
+  ctx.fillStyle = highlight ? '#0e2050' : '#081428';
+  ctx.fill();
+
+  // Draw day side (semicircle facing Sun)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ex, ey, ER, sunAngle - Math.PI/2, sunAngle + Math.PI/2);
+  ctx.lineTo(ex, ey);
+  ctx.closePath();
+  const dayG = ctx.createRadialGradient(
+    ex + sunDirX * ER * 0.4, ey + sunDirY * ER * 0.4, 1,
+    ex, ey, ER
+  );
+  dayG.addColorStop(0, highlight ? '#7ee8ff' : '#4aa0d0');
+  dayG.addColorStop(1, highlight ? '#1060c0' : '#0a3060');
+  ctx.fillStyle = dayG;
+  ctx.fill();
+  ctx.restore();
+
+  // Earth outline
+  ctx.strokeStyle = highlight ? 'rgba(0,220,255,0.8)' : 'rgba(0,184,212,0.4)';
+  ctx.lineWidth   = highlight ? 2 : 1;
+  ctx.beginPath();
+  ctx.arc(ex, ey, ER, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Axis line — ALWAYS pointing straight up (same direction in all positions)
+  // Axis direction: from S pole (below) to N pole (above) — always vertical "up" in diagram
+  // The axis is tilted AXIS_ANGLE from straight up (same in all positions = key insight!)
+  const axLen = ER + 8;
+  const axNX  = ex + Math.sin(AXIS_ANGLE) * axLen;
+  const axNY  = ey - Math.cos(AXIS_ANGLE) * axLen;
+  const axSX  = ex - Math.sin(AXIS_ANGLE) * axLen;
+  const axSY  = ey + Math.cos(AXIS_ANGLE) * axLen;
+
+  ctx.strokeStyle = highlight ? 'rgba(255,210,0,0.95)' : 'rgba(255,190,0,0.55)';
+  ctx.lineWidth   = highlight ? 2 : 1.2;
+  ctx.setLineDash([3, 2]);
+  ctx.beginPath();
+  ctx.moveTo(axSX, axSY);
+  ctx.lineTo(axNX, axNY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // N pole dot
+  ctx.beginPath();
+  ctx.arc(axNX, axNY, highlight ? 3 : 1.5, 0, Math.PI*2);
+  ctx.fillStyle = highlight ? '#ffd060' : 'rgba(255,200,0,0.6)';
+  ctx.fill();
+
+  // N label (only for highlighted)
+  if (highlight) {
+    ctx.font      = 'bold 9px system-ui';
+    ctx.fillStyle = '#ffd060';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', axNX, axNY - 5);
+  }
+}
+
+// Find which season the angle is closest to
+function nearestSeason(angle) {
+  let best = 0, bestDiff = Infinity;
+  SEASONS.forEach((s, i) => {
+    let diff = Math.abs(angle - s.angle);
+    if (diff > Math.PI) diff = 2*Math.PI - diff;
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  });
+  return { idx: best, diff: bestDiff };
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07101f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  if (!render._stars) {
+    render._stars = Array.from({length:80}, () =>
+      [Math.random()*W, Math.random()*H, Math.random()*1.1+0.3]);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  render._stars.forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  });
+
+  // ── Orbit ellipse ──
+  ctx.strokeStyle = 'rgba(0,184,212,0.25)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.ellipse(SX, SY, ORX, ORY, 0, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Direction arrows on orbit (show Earth moves counterclockwise... actually
+  // in NH-top-down view Earth moves counterclockwise → angle decreases)
+  // Just label the direction
+  ctx.font      = '8px system-ui';
+  ctx.fillStyle = 'rgba(0,184,212,0.4)';
+  ctx.textAlign = 'center';
+  ctx.fillText('←', SX + ORX + 10, SY - 4);
+
+  // ── Sun ──
+  const sunGrad = ctx.createRadialGradient(SX, SY, 4, SX, SY, 32);
+  sunGrad.addColorStop(0,   '#fffde8');
+  sunGrad.addColorStop(0.5, '#ffcc00');
+  sunGrad.addColorStop(1,   'rgba(255,120,0,0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath(); ctx.arc(SX, SY, 32, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath(); ctx.arc(SX, SY, 18, 0, Math.PI*2); ctx.fill();
+  ctx.font      = 'bold 9px system-ui';
+  ctx.fillStyle = '#0a1628';
+  ctx.textAlign = 'center';
+  ctx.fillText('שמש', SX, SY + 3);
+
+  // ── 4 Season markers (small Earths) ──
+  const near = nearestSeason(orbitAngle);
+  SEASONS.forEach((s, i) => {
+    const pos  = orbitPos(s.angle);
+    const isHighlight = (near.idx === i && near.diff < 0.4);
+    drawEarth(pos.x, pos.y, s.angle, isHighlight);
+
+    // Season label
+    const lx = pos.x + (pos.x > SX ? 28 : -28);
+    const ly = pos.y + (pos.y > SY ? 22 : -22);
+    ctx.font      = `${isHighlight ? 'bold ' : ''}9px system-ui`;
+    ctx.fillStyle = isHighlight ? s.color : 'rgba(200,210,220,0.6)';
+    ctx.textAlign = 'center';
+    // Season name (short)
+    const shortName = s.name.split(' — ')[0].replace('קיצה ', '').replace('שוויון ', 'שוויון ');
+    ctx.fillText(shortName, lx, ly);
+    if (isHighlight) {
+      ctx.font = '8px system-ui';
+      ctx.fillText(s.labelN + ' | ' + s.labelS, lx, ly + 11);
+    }
+  });
+
+  // ── Moving Earth (current position) ──
+  const pos = orbitPos(orbitAngle);
+  drawEarth(pos.x, pos.y, orbitAngle, false);
+
+  // Glow on moving Earth
+  const glowG = ctx.createRadialGradient(pos.x, pos.y, ER, pos.x, pos.y, ER + 10);
+  glowG.addColorStop(0, 'rgba(0,184,212,0.25)');
+  glowG.addColorStop(1, 'transparent');
+  ctx.fillStyle = glowG;
+  ctx.beginPath(); ctx.arc(pos.x, pos.y, ER + 10, 0, Math.PI*2); ctx.fill();
+
+  // ── "Axis direction" fixed arrow in corner ──
+  ctx.font      = '8px system-ui';
+  ctx.fillStyle = 'rgba(255,200,0,0.7)';
+  ctx.textAlign = 'right';
+  ctx.fillText('כיוון הציר — קבוע תמיד!', W - 10, H - 20);
+  // Draw small axis indicator
+  const ax0x = W - 30, ax0y = H - 10;
+  const axLen2 = 12;
+  ctx.strokeStyle = 'rgba(255,200,0,0.7)';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  ctx.moveTo(ax0x - Math.sin(AXIS_ANGLE)*axLen2, ax0y + Math.cos(AXIS_ANGLE)*axLen2);
+  ctx.lineTo(ax0x + Math.sin(AXIS_ANGLE)*axLen2, ax0y - Math.cos(AXIS_ANGLE)*axLen2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── "Polaris" label ──
+  ctx.font      = '8px system-ui';
+  ctx.fillStyle = 'rgba(180,180,255,0.6)';
+  ctx.textAlign = 'center';
+  ctx.fillText('★ כוכב הצפון', SX + 10, 14);
+  // Dashed line from Sun toward "Polaris" (upward)
+  ctx.strokeStyle = 'rgba(180,180,255,0.2)';
+  ctx.lineWidth   = 0.8;
+  ctx.setLineDash([3, 4]);
+  ctx.beginPath();
+  ctx.moveTo(SX + 10, 20);
+  ctx.lineTo(SX + 10, SY - 35);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Update insight text ──
+  const nearSeason = nearestSeason(orbitAngle);
+  if (nearSeason.diff < 0.5) {
+    document.getElementById('insight-text').innerHTML = INSIGHTS[nearSeason.idx];
+    currentSeason = nearSeason.idx;
+  }
+}
+
+// Animation loop
+let lastT = 0;
+function animate(ts) {
+  if (animating) {
+    const dt = ts - lastT;
+    // Orbit: Earth moves counterclockwise → angle decreases
+    orbitAngle -= dt * 0.0004;
+    if (orbitAngle < -Math.PI) orbitAngle += 2 * Math.PI;
+  }
+  lastT = ts;
+  render();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+function toggleAnim() {
+  animating = !animating;
+  document.getElementById('btn-anim').textContent = animating ? '⏸ עצור' : '▶ הפעל';
+  document.getElementById('btn-anim').classList.toggle('active', animating);
+}
+
+function jumpSeason(idx) {
+  animating = false;
+  document.getElementById('btn-anim').textContent = '▶ הפעל';
+  document.getElementById('btn-anim').classList.remove('active');
+  orbitAngle = SEASONS[idx].angle;
+  document.getElementById('insight-text').innerHTML = INSIGHTS[idx];
+  render();
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (W / rect.width);
+  const my = (e.clientY - rect.top)  * (H / rect.height);
+  // Find nearest orbit point
+  let best = orbitAngle, bestD = Infinity;
+  for (let a = 0; a < Math.PI*2; a += 0.05) {
+    const p = orbitPos(a);
+    const d = Math.hypot(p.x - mx, p.y - my);
+    if (d < bestD) { bestD = d; best = a; }
+  }
+  if (bestD < 30) {
+    animating = false;
+    document.getElementById('btn-anim').textContent = '▶ הפעל';
+    document.getElementById('btn-anim').classList.remove('active');
+    orbitAngle = best;
+  }
+});
+</script>
+</body>
+</html>

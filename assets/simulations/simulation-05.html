@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מה קורה אם הציר ישר? — חקירת הנטייה</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#07101f; color:#f0f4f8;
+  font-family:system-ui,sans-serif;
+  height:100vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:8px; overflow:hidden; padding:8px;
+}
+h2 { font-size:.9rem; color:#00b8d4; text-align:center; }
+canvas { display:block; max-width:100%; height:auto; }
+.slider-row {
+  display:flex; align-items:center; gap:10px;
+  width:100%; max-width:500px;
+}
+.slider-row label { font-size:.78rem; color:#a8b8cc; white-space:nowrap; min-width:40px; text-align:center; }
+#tilt-slider { flex:1; accent-color:#ff8c42; }
+.tilt-val { font-size:1.1rem; font-weight:700; color:#ff8c42; min-width:52px; text-align:center; }
+.result-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; max-width:500px; font-size:.72rem; }
+.rg { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:6px; padding:6px 8px; text-align:center; line-height:1.45; }
+.rg strong { display:block; margin-bottom:2px; font-size:.73rem; }
+.rg.pole   strong { color:#64dcff; }
+.rg.mid    strong { color:#ffa040; }
+.rg.equator strong { color:#ff7070; }
+</style>
+</head>
+<body>
+<h2>מה קורה אם הציר ישר? — חקרו את נטיית הציר</h2>
+<canvas id="cv" width="500" height="248"></canvas>
+<div class="slider-row">
+  <label>0°</label>
+  <input type="range" id="tilt-slider" min="0" max="45" value="23" step="1">
+  <label>45°</label>
+  <div class="tilt-val" id="tilt-val">23°</div>
+</div>
+<div class="result-grid">
+  <div class="rg pole">
+    <strong>קוטב צפוני 90°N</strong>
+    <div id="pole-summer" style="margin-bottom:2px"></div>
+    <div id="pole-winter"></div>
+  </div>
+  <div class="rg mid">
+    <strong>ישראל 31°N</strong>
+    <div id="mid-summer" style="margin-bottom:2px"></div>
+    <div id="mid-winter"></div>
+  </div>
+  <div class="rg equator">
+    <strong>קו המשווה 0°</strong>
+    <div id="eq-all"></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const W = 500, H = 248;
+const R  = 80, ECX = 168, ECY = H / 2;
+
+// Africa-centered orthographic projection (20°E, 5°N)
+const VL = 20*Math.PI/180, VB = 5*Math.PI/180;
+const sVB = Math.sin(VB), cVB = Math.cos(VB);
+
+function proj(lonDeg, latDeg) {
+  const lo = lonDeg*Math.PI/180, la = latDeg*Math.PI/180;
+  const c = sVB*Math.sin(la) + cVB*Math.cos(la)*Math.cos(lo-VL);
+  if (c < 0) return null;
+  return [ECX + R*Math.cos(la)*Math.sin(lo-VL),
+          ECY - R*(cVB*Math.sin(la) - sVB*Math.cos(la)*Math.cos(lo-VL))];
+}
+
+function fillR(pts, color) {
+  ctx.beginPath(); let first=true;
+  for (const [lo,la] of pts) {
+    const p=proj(lo,la); if(!p) continue;
+    first?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]); first=false;
+  }
+  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+}
+
+const REGIONS = [
+  {c:'#be8f4a',pts:[[-16,33],[-12,36],[-2,37],[8,36],[17,33],[26,30],[33,30],[38,28],[40,22],[40,13],[38,8],[32,3],[30,0],[24,-2],[16,-2],[10,0],[5,3],[0,5],[-5,4],[-10,4],[-15,5],[-17,8],[-16,16],[-16,33]]},
+  {c:'#4a8028',pts:[[-16,16],[-15,5],[-10,4],[-5,4],[0,5],[5,3],[10,0],[10,-5],[6,-9],[2,-10],[-2,-8],[-6,-5],[-10,-2],[-14,3],[-16,8],[-16,16]]},
+  {c:'#245e18',pts:[[10,0],[16,-1],[22,-3],[28,-1],[32,3],[30,5],[26,4],[22,-2],[20,-6],[17,-9],[13,-8],[10,-5],[10,0]]},
+  {c:'#8a7838',pts:[[32,3],[35,8],[38,12],[42,13],[46,11],[44,8],[43,3],[44,0],[42,-4],[40,-6],[38,-2],[35,4],[32,5],[30,3],[32,3]]},
+  {c:'#588028',pts:[[10,-5],[13,-8],[17,-9],[20,-6],[22,-2],[26,4],[30,3],[32,5],[35,4],[38,-2],[40,-6],[42,-11],[40,-18],[38,-25],[35,-35],[28,-36],[22,-34],[17,-30],[14,-24],[12,-17],[10,-12],[7,-9],[5,-6],[3,-2],[5,3],[10,0],[10,-5]]},
+  {c:'#c8a050',pts:[[35,30],[37,28],[40,24],[43,21],[48,18],[52,14],[57,11],[60,11],[57,15],[55,20],[52,24],[47,24],[45,22],[43,18],[40,16],[38,22],[35,28],[35,30]]},
+  {c:'#b09055',pts:[[32,30],[36,33],[38,35],[42,37],[47,37],[50,34],[52,31],[50,28],[47,27],[44,28],[42,22],[40,24],[38,28],[35,30],[35,33],[32,33],[32,30]]},
+  {c:'#c0a050',pts:[[30,29],[32,31],[35,30],[34,26],[31,25],[30,29]]},
+  {c:'#689840',pts:[[-10,36],[-8,38],[-5,42],[-3,44],[0,46],[5,48],[8,47],[10,48],[14,48],[18,50],[22,50],[27,50],[30,47],[28,44],[32,41],[28,38],[24,38],[22,38],[20,38],[18,40],[16,40],[14,36],[13,38],[11,44],[8,44],[5,44],[0,43],[-3,43],[-7,40],[-8,38],[-10,36]]},
+  {c:'#8a9c48',pts:[[-10,36],[-9,39],[-8,41],[-5,44],[0,46],[0,43],[0,40],[-3,38],[-5,36],[-8,36],[-10,36]]},
+  {c:'#989a56',pts:[[26,38],[28,38],[30,41],[36,40],[40,37],[42,37],[40,36],[36,37],[32,36],[28,36],[26,36],[26,38]]},
+  {c:'#9a9858',pts:[[44,28],[47,27],[50,28],[52,31],[56,28],[60,24],[57,22],[55,22],[52,24],[47,24],[44,26],[44,28]]},
+  {c:'#5a8833',pts:[[5,55],[8,57],[10,58],[14,58],[18,60],[22,63],[20,67],[16,68],[12,65],[10,63],[8,59],[5,56],[5,55]]},
+  {c:'#5e8838',pts:[[-5,50],[0,52],[1,52],[-2,57],[-4,58],[-6,55],[-5,50]]},
+  {c:'#588830',pts:[[43,-12],[46,-14],[50,-18],[50,-23],[48,-25],[46,-25],[43,-22],[43,-17],[43,-12]]},
+  {c:'#c8e0f0',pts:[[-52,60],[-42,62],[-30,63],[-20,65],[-18,72],[-24,80],[-40,83],[-52,78],[-56,70],[-52,60]]},
+  {c:'#789040',pts:[[65,22],[68,20],[72,18],[76,14],[78,8],[75,10],[72,12],[68,14],[65,18],[62,20],[65,22]]},
+];
+
+function dayFractionSummer(phi_deg, tilt_deg) {
+  if (Math.abs(phi_deg) >= 89.9) return (phi_deg * tilt_deg >= 0) ? 1 : 0;
+  const tau = -Math.tan(phi_deg*Math.PI/180) * Math.tan(tilt_deg*Math.PI/180);
+  return (1 - Math.max(-1, Math.min(1, tau))) / 2;
+}
+function dayFractionWinter(phi_deg, tilt_deg) {
+  return 1 - dayFractionSummer(phi_deg, tilt_deg);
+}
+function hoursStr(frac) {
+  if (frac >= 0.9999) return '24 שע׳ 🌞';
+  if (frac <= 0.0001) return '0 שע׳ 🌑';
+  return (frac*24).toFixed(1) + ' שע׳';
+}
+
+function render(tiltDeg) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07101f'; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  if (!render._stars) render._stars = Array.from({length:55},()=>[Math.random()*W,Math.random()*H,Math.random()*1+0.3]);
+  ctx.fillStyle='rgba(255,255,255,0.35)';
+  render._stars.forEach(([x,y,r])=>{ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); });
+
+  const T = tiltDeg * Math.PI / 180;
+  const sinT = Math.sin(T), cosT = Math.cos(T);
+  const SX = W - 26;
+
+  // Sun (right)
+  const sg = ctx.createRadialGradient(SX,ECY,4,SX,ECY,46);
+  sg.addColorStop(0,'#fffde8'); sg.addColorStop(.55,'#ffcc00'); sg.addColorStop(1,'rgba(255,100,0,0)');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(SX,ECY,46,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(SX,ECY,18,0,Math.PI*2); ctx.fill();
+  ctx.font='bold 7px system-ui'; ctx.fillStyle='#0a1628'; ctx.textAlign='center';
+  ctx.fillText('שמש',SX,ECY+3);
+
+  // Sun rays leftward
+  ctx.strokeStyle='rgba(255,200,0,.35)'; ctx.lineWidth=1;
+  for (let yo=-70; yo<=70; yo+=14) {
+    ctx.beginPath(); ctx.moveTo(SX-22,ECY+yo); ctx.lineTo(ECX+R+2,ECY+yo); ctx.stroke();
+  }
+
+  // ── Earth (clipped) ──
+  ctx.save();
+  ctx.beginPath(); ctx.arc(ECX,ECY,R,0,Math.PI*2); ctx.clip();
+
+  // Night base
+  ctx.fillStyle='#030b18'; ctx.fillRect(ECX-R-2,ECY-R-2,2*R+4,2*R+4);
+
+  // Ocean day gradient (right half)
+  const og = ctx.createRadialGradient(ECX+R*.35,ECY-R*.22,R*.08,ECX,ECY,R);
+  og.addColorStop(0,'#52b8e5'); og.addColorStop(.25,'#1878b8'); og.addColorStop(.65,'#0c4278'); og.addColorStop(.9,'#071c50'); og.addColorStop(1,'#020c18');
+  ctx.beginPath(); ctx.arc(ECX,ECY,R,-Math.PI/2,Math.PI/2); ctx.lineTo(ECX,ECY); ctx.closePath();
+  ctx.fillStyle=og; ctx.fill();
+
+  // Continents
+  REGIONS.forEach(reg => fillR(reg.pts, reg.c));
+
+  // Polar ice
+  const nPole=proj(0,90), sPole=proj(0,-90);
+  if(nPole){ctx.beginPath();ctx.arc(nPole[0],nPole[1],R*.16,0,Math.PI*2);ctx.fillStyle='#cce8f5';ctx.fill();}
+  if(sPole){ctx.beginPath();ctx.arc(sPole[0],sPole[1],R*.2,0,Math.PI*2);ctx.fillStyle='#d8eef5';ctx.fill();}
+
+  // Night overlay (left half)
+  ctx.beginPath(); ctx.arc(ECX,ECY,R,Math.PI/2,3*Math.PI/2); ctx.lineTo(ECX,ECY); ctx.closePath();
+  ctx.fillStyle='rgba(2,8,22,.89)'; ctx.fill();
+
+  // 3D shading
+  const sh = ctx.createRadialGradient(ECX+R*.32,ECY-R*.22,R*.05,ECX,ECY,R);
+  sh.addColorStop(0,'rgba(255,255,255,.18)'); sh.addColorStop(.38,'rgba(255,255,255,.03)');
+  sh.addColorStop(.82,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,30,.34)');
+  ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(ECX,ECY,R,0,Math.PI*2); ctx.fill();
+
+  ctx.restore();
+
+  // Earth outline
+  ctx.strokeStyle='rgba(0,160,220,.45)'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.arc(ECX,ECY,R,0,Math.PI*2); ctx.stroke();
+
+  // Atmosphere
+  const atm=ctx.createRadialGradient(ECX,ECY,R-2,ECX,ECY,R+14);
+  atm.addColorStop(0,'rgba(60,160,255,.22)'); atm.addColorStop(1,'transparent');
+  ctx.fillStyle=atm; ctx.beginPath(); ctx.arc(ECX,ECY,R+14,0,Math.PI*2); ctx.fill();
+
+  // Terminator
+  ctx.strokeStyle='rgba(0,220,255,.65)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(ECX,ECY-R); ctx.lineTo(ECX,ECY+R); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Lat segments (sun on right)
+  [90,66.5,31,23.5,0,-23.5,-31,-66.5,-90].forEach(ld => {
+    const phi=ld*Math.PI/180, sp=Math.sin(phi), cp=Math.cos(phi);
+    const cxs=ECX+R*sp*sinT, cys=ECY-R*sp*cosT;
+    const hx=R*cp*cosT,      hy=R*cp*sinT;
+    const tau_raw = (Math.abs(ld)>=89.9) ? (ld>0?-1:1) : -Math.tan(phi)*Math.tan(T);
+    const tau=Math.max(-1,Math.min(1,tau_raw));
+    const xs=cxs+hx*tau, ys=cys+hy*tau;
+    const x1=cxs-hx,y1=cys-hy, x2=cxs+hx,y2=cys+hy;
+    const col=ld===0?'rgba(255,80,80,.9)':(Math.abs(ld)===23.5?'rgba(255,200,50,.85)':'rgba(100,220,255,.85)');
+    const nc='rgba(20,45,120,.45)';
+    const lw=(ld===0||Math.abs(ld)===66.5||Math.abs(ld)===90)?2.2:1.2;
+    // day = right (xs→x2)
+    if(tau<1){ctx.beginPath();ctx.moveTo(xs,ys);ctx.lineTo(x2,y2);ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();}
+    // night = left (x1→xs)
+    if(tau>-1){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(xs,ys);ctx.strokeStyle=nc;ctx.lineWidth=lw;ctx.stroke();}
+  });
+
+  // Axis (always upper-right at T degrees)
+  const aL=R+16;
+  const axNX=ECX+aL*sinT, axNY=ECY-aL*cosT;
+  const axSX=ECX-aL*sinT, axSY=ECY+aL*cosT;
+  ctx.strokeStyle='#ffd060'; ctx.lineWidth=2.2; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(axSX,axSY); ctx.lineTo(axNX,axNY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font='bold 9px system-ui'; ctx.fillStyle='#ffd060'; ctx.textAlign='center';
+  ctx.fillText('N',axNX,axNY-5); ctx.fillText('S',axSX,axSY+11);
+
+  if (tiltDeg > 0) {
+    ctx.strokeStyle='rgba(255,200,0,.55)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(ECX,ECY-R-2,14,-Math.PI/2,-Math.PI/2+T,false); ctx.stroke();
+    ctx.font='8px system-ui'; ctx.fillStyle='#ffd060'; ctx.textAlign='left';
+    ctx.fillText(tiltDeg+'°',axNX+3,axNY+1);
+  }
+
+  // Day/Night labels
+  ctx.font='bold 8px system-ui'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,210,80,.72)'; ctx.fillText('יום',ECX+R*.55,ECY+R+14);
+  ctx.fillStyle='rgba(80,120,200,.62)'; ctx.fillText('לילה',ECX-R*.55,ECY+R+14);
+
+  // ── Right panel: bar chart ──
+  const panX=280, panW=W-panX-10;
+  ctx.font='bold 9px system-ui'; ctx.fillStyle='#00b8d4'; ctx.textAlign='center';
+  ctx.fillText('נטייה = '+tiltDeg+'°', panX+panW/2, 18);
+
+  const scenarios=[
+    {label:'קיץ קוטב N', frac:dayFractionSummer(90,tiltDeg),  color:'#64dcff'},
+    {label:'קיץ ישראל',  frac:dayFractionSummer(31,tiltDeg),  color:'#ffa040'},
+    {label:'משווה',      frac:dayFractionSummer(0,tiltDeg),   color:'#ff7070'},
+    {label:'חורף ישראל', frac:dayFractionWinter(31,tiltDeg),  color:'#8090c0'},
+    {label:'חורף קוטב N',frac:dayFractionWinter(90,tiltDeg), color:'#3050a0'},
+  ];
+  const barY0=28, barH=22, barW=panW-8, barX=panX+4;
+  scenarios.forEach((sc,i)=>{
+    const y=barY0+i*(barH+4);
+    ctx.fillStyle='rgba(255,255,255,.04)';
+    ctx.beginPath(); ctx.roundRect(barX,y,barW,barH,3); ctx.fill();
+    if(sc.frac>0){
+      ctx.fillStyle=sc.color; ctx.globalAlpha=0.75;
+      ctx.beginPath(); ctx.roundRect(barX,y,sc.frac*barW,barH,3); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    ctx.font='8px system-ui'; ctx.fillStyle='rgba(255,255,255,.8)'; ctx.textAlign='right';
+    ctx.fillText(sc.label,barX+barW-3,y+9);
+    ctx.font='bold 8px system-ui'; ctx.fillStyle='rgba(255,255,255,.9)'; ctx.textAlign='right';
+    ctx.fillText(hoursStr(sc.frac),barX+barW-3,y+19);
+  });
+
+  // Update cards
+  document.getElementById('pole-summer').textContent='☀️ קיץ: '+hoursStr(dayFractionSummer(90,tiltDeg));
+  document.getElementById('pole-winter').textContent='❄️ חורף: '+hoursStr(dayFractionWinter(90,tiltDeg));
+  document.getElementById('mid-summer').textContent ='☀️ קיץ: '+hoursStr(dayFractionSummer(31,tiltDeg));
+  document.getElementById('mid-winter').textContent ='❄️ חורף: '+hoursStr(dayFractionWinter(31,tiltDeg));
+  document.getElementById('eq-all').textContent     ='→ תמיד: '+hoursStr(dayFractionSummer(0,tiltDeg));
+}
+
+const slider=document.getElementById('tilt-slider');
+render(parseInt(slider.value));
+slider.addEventListener('input',()=>{
+  const v=parseInt(slider.value);
+  document.getElementById('tilt-val').textContent=v+'°';
+  render(v);
+});
+</script>
+</body>
+</html>

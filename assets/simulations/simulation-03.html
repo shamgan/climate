@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מרקטור → כדור הארץ — עיוות הפרופורציות</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#07101f;
+  color:#f0f4f8;
+  font-family:system-ui,sans-serif;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  overflow:hidden;
+  padding:8px;
+}
+h2 { font-size:.88rem; color:#00b8d4; text-align:center; }
+canvas { display:block; cursor:col-resize; max-width:100%; height:auto; }
+.slider-row {
+  display:flex; align-items:center; gap:10px;
+  width:100%; max-width:500px;
+}
+.slider-row label { font-size:.78rem; color:#a8b8cc; white-space:nowrap; }
+#morph-slider { flex:1; accent-color:#00b8d4; }
+.btn-auto {
+  background:rgba(0,184,212,.18);
+  border:1px solid rgba(0,184,212,.4);
+  color:#f0f4f8; padding:5px 14px;
+  border-radius:6px; font-size:.78rem; cursor:pointer;
+}
+.btn-auto:hover { background:rgba(0,184,212,.32); }
+.fact-row {
+  display:flex; gap:8px;
+  width:100%; max-width:500px;
+  font-size:.72rem;
+}
+.fc2 {
+  flex:1;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:6px; padding:6px 10px;
+  text-align:center; line-height:1.5;
+}
+.fc2 strong { display:block; margin-bottom:2px; }
+</style>
+</head>
+<body>
+<h2>מרקטור ↔ כדור הארץ — עיוות פרופורציות</h2>
+
+<canvas id="cv" width="500" height="268"></canvas>
+
+<div class="slider-row">
+  <label>מפה שטוחה</label>
+  <input type="range" id="morph-slider" min="0" max="100" value="0" step="1">
+  <label>כדור הארץ</label>
+  <button class="btn-auto" id="btn-auto">▶ אנימציה</button>
+</div>
+
+<div class="fact-row">
+  <div class="fc2" id="fc-africa">
+    <strong style="color:#66bb6a">אפריקה</strong>
+    <span id="africa-txt">נראית קטנה ממה שהיא</span>
+  </div>
+  <div class="fc2" id="fc-greenland">
+    <strong style="color:#90caf9">גרינלנד</strong>
+    <span id="greenland-txt">נראית כמו יבשת ענקית</span>
+  </div>
+  <div class="fc2" id="fc-russia">
+    <strong style="color:#80cbc4">רוסיה</strong>
+    <span id="russia-txt">מוגזמת בצפון מרקטור</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const W = 500, H = 268;
+
+// Globe center and radius
+const GCX = W * 0.72, GCY = H * 0.48, GR = 90;
+
+// World map polygons in [lon, lat] degrees
+// Lon: -180 to 180, Lat: -90 to 90
+// Simplified but recognizable shapes
+const CONTINENTS = [
+  {
+    name:'Africa', color:'#4a8c4a',
+    pts:[[-18,15],[-8,5],[2,-5],[8,-17],[12,-34],[32,-34],[42,-12],[52,12],[44,22],[42,37],[32,30],[18,28],[12,24],[-2,6],[-18,15]]
+  },
+  {
+    name:'Europe', color:'#5a9e5a',
+    pts:[[-10,36],[0,44],[8,44],[14,54],[14,58],[24,58],[26,68],[18,70],[8,62],[2,52],[-8,44],[-10,36]]
+  },
+  {
+    name:'Asia', color:'#4a9060',
+    pts:[[26,42],[40,38],[60,24],[78,10],[100,10],[110,20],[120,22],[132,34],[140,46],[142,56],[140,60],[124,52],[106,52],[80,72],[62,68],[44,68],[32,60],[26,50],[26,42]]
+  },
+  {
+    name:'NorthAmerica', color:'#5a8c5a',
+    pts:[[-170,62],[-140,60],[-130,54],[-82,46],[-70,44],[-62,46],[-58,62],[-72,72],[-96,74],[-130,70],[-156,60],[-166,62],[-170,62]]
+  },
+  {
+    name:'SouthAmerica', color:'#4a8050',
+    pts:[[-82,10],[-52,12],[-36,-4],[-34,-54],[-64,-56],[-72,-50],[-78,-30],[-82,0],[-82,10]]
+  },
+  {
+    name:'Australia', color:'#6a9c4a',
+    pts:[[114,-22],[122,-18],[130,-14],[138,-12],[148,-20],[154,-26],[150,-38],[138,-36],[126,-34],[114,-22]]
+  },
+  {
+    name:'Greenland', color:'#90c0e0',
+    pts:[[-44,76],[-24,78],[-18,72],[-20,64],[-36,64],[-50,68],[-56,76],[-44,76]]
+  },
+  {
+    name:'Antarctica', color:'#cce0ee',
+    pts:[[-180,-68],[180,-68],[180,-90],[-180,-90],[-180,-68]]
+  },
+  {
+    name:'Scandinavia', color:'#5a9060',
+    pts:[[10,58],[14,60],[18,60],[22,66],[28,70],[30,70],[30,62],[24,58],[14,56],[10,58]]
+  },
+];
+
+// Graticule lines
+const LONLINES = [-180,-150,-120,-90,-60,-30,0,30,60,90,120,150,180];
+const LATLINES = [-60,-30,0,30,60];
+
+// ── Projections ──
+
+// Mercator: map entire world to a W×mapH area
+const MAP_Y0 = 14;    // top of map on canvas
+const MAP_H  = H - 28; // map height
+const MAP_W  = W;
+
+function mercLat(lat) {
+  // Clamp to avoid infinity
+  const clamped = Math.max(-85, Math.min(85, lat));
+  const latR = clamped * Math.PI / 180;
+  const sinL = Math.sin(latR);
+  return Math.log((1 + sinL) / (1 - sinL)) / 2;
+}
+
+// Mercator total y range for ±85°
+const mercMax = mercLat(85);
+const mercMin = mercLat(-85);
+
+function toMercator(lon, lat) {
+  const x = (lon + 180) / 360 * MAP_W;
+  const my = mercLat(lat);
+  const y  = MAP_Y0 + (1 - (my - mercMin) / (mercMax - mercMin)) * MAP_H;
+  return [x, y];
+}
+
+// Globe orthographic projection (side view, lon0=15, lat0=20)
+const GLOBE_LON0 = 20, GLOBE_LAT0 = 15;
+const GL0 = GLOBE_LON0 * Math.PI / 180;
+const GL1 = GLOBE_LAT0 * Math.PI / 180;
+
+function toGlobe(lon, lat) {
+  const lam  = lon * Math.PI / 180;
+  const phi  = lat * Math.PI / 180;
+  // Orthographic projection
+  const c    = Math.sin(GL1)*Math.sin(phi) + Math.cos(GL1)*Math.cos(phi)*Math.cos(lam - GL0);
+  if (c < 0) return null; // behind the globe
+  const x = GR * Math.cos(phi) * Math.sin(lam - GL0);
+  const y = GR * (Math.cos(GL1)*Math.sin(phi) - Math.sin(GL1)*Math.cos(phi)*Math.cos(lam - GL0));
+  return [GCX + x, GCY - y];
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function project(lon, lat, t) {
+  const [mx, my] = toMercator(lon, lat);
+  const gp = toGlobe(lon, lat);
+  // In flat-map mode show all points; in globe mode hide back-facing
+  if (!gp) return t < 0.5 ? [mx, my] : null;
+  return [lerp(mx, gp[0], t), lerp(my, gp[1], t)];
+}
+
+// Draw a continent polygon
+function drawContinent(cont, t) {
+  const pts = cont.pts;
+  const projected = pts.map(([lon, lat]) => project(lon, lat, t)).filter(Boolean);
+  if (projected.length < 3) return;
+
+  ctx.beginPath();
+  ctx.moveTo(projected[0][0], projected[0][1]);
+  for (let i = 1; i < projected.length; i++) {
+    // Skip huge jumps (wrap-around)
+    const dx = Math.abs(projected[i][0] - projected[i-1][0]);
+    if (dx > 150 && t < 0.1) { ctx.moveTo(projected[i][0], projected[i][1]); continue; }
+    ctx.lineTo(projected[i][0], projected[i][1]);
+  }
+  ctx.closePath();
+  ctx.fillStyle = cont.color;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,184,212,0.2)';
+  ctx.lineWidth   = 0.6;
+  ctx.stroke();
+}
+
+// Draw graticule
+function drawGraticule(t) {
+  ctx.strokeStyle = t > 0.5 ? 'rgba(0,184,212,0.15)' : 'rgba(0,184,212,0.12)';
+  ctx.lineWidth   = 0.6;
+
+  // Longitude lines
+  LONLINES.forEach(lon => {
+    let started = false;
+    for (let lat = -85; lat <= 85; lat += 5) {
+      const p = project(lon, lat, t);
+      if (!p) { started = false; continue; }
+      if (!started) { ctx.beginPath(); ctx.moveTo(p[0], p[1]); started = true; }
+      else ctx.lineTo(p[0], p[1]);
+    }
+    if (started) ctx.stroke();
+  });
+
+  // Latitude lines
+  LATLINES.forEach(lat => {
+    let started = false;
+    for (let lon = -180; lon <= 180; lon += 3) {
+      const p = project(lon, lat, t);
+      if (!p) { started = false; continue; }
+      if (!started) { ctx.beginPath(); ctx.moveTo(p[0], p[1]); started = true; }
+      else ctx.lineTo(p[0], p[1]);
+    }
+    if (started) ctx.stroke();
+  });
+}
+
+// Draw equator
+function drawEquator(t) {
+  ctx.strokeStyle = 'rgba(255,80,80,0.5)';
+  ctx.lineWidth   = 1.2;
+  let started = false;
+  for (let lon = -180; lon <= 180; lon += 2) {
+    const p = project(lon, 0, t);
+    if (!p) { started = false; continue; }
+    if (!started) { ctx.beginPath(); ctx.moveTo(p[0], p[1]); started = true; }
+    else ctx.lineTo(p[0], p[1]);
+  }
+  if (started) ctx.stroke();
+}
+
+// Globe background (ocean)
+function drawGlobeOcean(t) {
+  if (t < 0.02) return;
+  const a = Math.min(1, t * 2);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(GCX, GCY, GR, 0, Math.PI*2); ctx.clip();
+  const og = ctx.createRadialGradient(GCX-25, GCY-20, 5, GCX, GCY, GR);
+  og.addColorStop(0,   `rgba(100,210,255,${a})`);
+  og.addColorStop(0.5, `rgba(20,100,190,${a})`);
+  og.addColorStop(1,   `rgba(5,30,90,${a})`);
+  ctx.fillStyle = og;
+  ctx.fillRect(GCX-GR-2, GCY-GR-2, 2*(GR+2), 2*(GR+2));
+  ctx.restore();
+
+  // Atmosphere glow
+  if (t > 0.4) {
+    const atmA = Math.min(0.3, (t - 0.4) * 0.5);
+    const atm = ctx.createRadialGradient(GCX, GCY, GR-2, GCX, GCY, GR+14);
+    atm.addColorStop(0, `rgba(80,180,255,${atmA})`);
+    atm.addColorStop(1, 'transparent');
+    ctx.fillStyle = atm;
+    ctx.beginPath(); ctx.arc(GCX, GCY, GR+14, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// Map ocean background
+function drawMapOcean(t) {
+  if (t > 0.98) return;
+  const a = Math.min(1, (1 - t) * 2);
+  ctx.fillStyle = `rgba(10,30,80,${a * 0.65})`;
+  ctx.fillRect(0, MAP_Y0, MAP_W, MAP_H);
+}
+
+function renderLabels(t) {
+  // Equator label
+  const eqP = project(140, 0, t);
+  if (eqP) {
+    ctx.font = '8px system-ui';
+    ctx.fillStyle = 'rgba(255,80,80,0.75)';
+    ctx.textAlign = 'left';
+    if (t < 0.5) ctx.fillText('קו המשווה', eqP[0] + 3, eqP[1] - 2);
+  }
+
+  // "Flat map" label
+  if (t < 0.3) {
+    ctx.font = '9px system-ui';
+    ctx.fillStyle = 'rgba(0,184,212,0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText('היטל מרקטור — השתמש בגודל יחסי בזהירות!', W/2, MAP_Y0 - 3);
+  }
+
+  // Greenland vs Africa size annotation
+  const grnP = project(-42, 72, t);
+  const afP  = project(20,  0,  t);
+  if (t < 0.2 && grnP && afP) {
+    ctx.font = 'bold 8px system-ui';
+    ctx.fillStyle = '#90c0e0';
+    ctx.textAlign = 'center';
+    ctx.fillText('גרינלנד', grnP[0], grnP[1]);
+    ctx.fillStyle = '#66bb6a';
+    ctx.fillText('אפריקה', afP[0], afP[1]);
+  }
+}
+
+let morphT = 0;
+let autoDir = 0;
+let animId;
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07101f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (visible when globing)
+  if (morphT > 0.1) {
+    if (!render._stars) {
+      render._stars = Array.from({length:50}, () =>
+        [Math.random()*W, Math.random()*H, Math.random()*1.1+0.3]);
+    }
+    const sa = Math.min(0.45, morphT * 0.6);
+    ctx.fillStyle = `rgba(255,255,255,${sa})`;
+    render._stars.forEach(([x,y,r]) => {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    });
+  }
+
+  drawMapOcean(morphT);
+  drawGlobeOcean(morphT);
+
+  // Globe outline (when morphing)
+  if (morphT > 0.05) {
+    ctx.strokeStyle = `rgba(0,184,212,${Math.min(0.5, morphT * 0.6)})`;
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath(); ctx.arc(GCX, GCY, GR, 0, Math.PI*2); ctx.stroke();
+  }
+
+  drawGraticule(morphT);
+  drawEquator(morphT);
+
+  // Clip to globe when mostly morphed
+  if (morphT > 0.6) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(GCX, GCY, GR, 0, Math.PI*2); ctx.clip();
+    CONTINENTS.forEach(c => drawContinent(c, morphT));
+    ctx.restore();
+  } else {
+    CONTINENTS.forEach(c => drawContinent(c, morphT));
+  }
+
+  renderLabels(morphT);
+
+  // Info cards update
+  const flat = morphT < 0.3;
+  const globe = morphT > 0.7;
+  document.getElementById('africa-txt').textContent   = globe ? 'גדולה ×14 מגרינלנד!' : flat ? 'נראית קטנה ממה שהיא' : 'מתרחבת לגודל האמיתי';
+  document.getElementById('greenland-txt').textContent = globe ? 'גודל אמיתי: ~14% מאפריקה' : flat ? 'נראית כמו יבשת ענקית' : 'מתכווצת לגודל האמיתי';
+  document.getElementById('russia-txt').textContent   = globe ? 'גדולה, אך לא 2× כאמריקה' : flat ? 'מוגזמת בצפון מרקטור' : 'מסתגלת לפרופורציה נכונה';
+
+  if (autoDir !== 0) {
+    morphT = Math.max(0, Math.min(1, morphT + autoDir * 0.008));
+    if (morphT >= 1) autoDir = -1;
+    if (morphT <= 0) autoDir = 1;
+    document.getElementById('morph-slider').value = Math.round(morphT * 100);
+    animId = requestAnimationFrame(render);
+  }
+}
+
+render();
+
+document.getElementById('morph-slider').addEventListener('input', function() {
+  morphT = parseInt(this.value) / 100;
+  autoDir = 0;
+  document.getElementById('btn-auto').textContent = '▶ אנימציה';
+  render();
+});
+
+document.getElementById('btn-auto').addEventListener('click', function() {
+  if (autoDir !== 0) {
+    autoDir = 0;
+    this.textContent = '▶ אנימציה';
+    if (animId) cancelAnimationFrame(animId);
+  } else {
+    autoDir = morphT >= 0.95 ? -1 : 1;
+    this.textContent = '⏸ עצור';
+    requestAnimationFrame(render);
+  }
+});
+</script>
+</body>
+</html>

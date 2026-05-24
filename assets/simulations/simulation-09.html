@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פיזור קרינת השמש — אזורי אקלים</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#07101f;
+  color:#f0f4f8;
+  font-family:system-ui,sans-serif;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  overflow:hidden;
+  padding:8px;
+}
+h2 { font-size:.88rem; color:#00b8d4; text-align:center; }
+canvas { display:block; cursor:crosshair; }
+.info-row {
+  display:flex; gap:8px;
+  width:100%; max-width:520px;
+  font-size:.72rem;
+}
+.ic {
+  flex:1;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:6px; padding:6px 8px;
+  text-align:center; line-height:1.45;
+}
+.ic strong { display:block; margin-bottom:2px; font-size:.74rem; }
+.ic.equator strong { color:#ff7070; }
+.ic.temperate strong { color:#ffa040; }
+.ic.polar strong { color:#64dcff; }
+.hint { font-size:.72rem; color:#607080; text-align:center; }
+</style>
+</head>
+<body>
+<h2>פיזור קרינת השמש לפי קו הרוחב</h2>
+
+<canvas id="cv" width="520" height="290"></canvas>
+
+<div class="info-row">
+  <div class="ic equator">
+    <strong>קו המשווה 0°</strong>
+    קרינה ישירה (90°)<br>
+    <span id="eq-area">שטח פגיעה: ×1.00</span><br>
+    <span id="eq-int" style="color:#ff7070">עצמת חום: 100%</span>
+  </div>
+  <div class="ic temperate">
+    <strong>ישראל ~31°N</strong>
+    זווית: 59°<br>
+    <span id="il-area">שטח פגיעה: ×1.15</span><br>
+    <span id="il-int" style="color:#ffa040">עצמת חום: 87%</span>
+  </div>
+  <div class="ic polar">
+    <strong>מוסקבה ~56°N</strong>
+    זווית: 34°<br>
+    <span id="mo-area">שטח פגיעה: ×1.80</span><br>
+    <span id="mo-int" style="color:#64dcff">עצמת חום: 56%</span>
+  </div>
+</div>
+<div class="hint">לחצו על כדור הארץ לבחירת קו רוחב</div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const W = 520, H = 290;
+
+const R   = 105;
+const ECX = 290;
+const ECY = H / 2 + 5;
+
+// Fixed axis tilt: always upper-right at 23.5°
+const TILT = 23.5 * Math.PI / 180;
+const sinT = Math.sin(TILT), cosT = Math.cos(TILT);
+
+// Africa-centered orthographic projection (20°E, 5°N)
+// Mirrored x so Africa faces LEFT (toward the Sun)
+const VL  = 20 * Math.PI / 180;
+const VB  = 5  * Math.PI / 180;
+const sVB = Math.sin(VB), cVB = Math.cos(VB);
+
+function proj(lonDeg, latDeg) {
+  const lo = lonDeg * Math.PI / 180, la = latDeg * Math.PI / 180;
+  const c = sVB * Math.sin(la) + cVB * Math.cos(la) * Math.cos(lo - VL);
+  if (c < 0) return null;
+  // Standard projection: Africa centered, west Africa faces left (toward Sun)
+  return [ECX + R * Math.cos(la) * Math.sin(lo - VL),
+          ECY - R * (cVB * Math.sin(la) - sVB * Math.cos(la) * Math.cos(lo - VL))];
+}
+
+function fillR(pts, color) {
+  ctx.beginPath(); let first = true;
+  for (const [lo, la] of pts) {
+    const p = proj(lo, la); if (!p) continue;
+    first ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]);
+    first = false;
+  }
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+// Africa-centered continent polygons (same set as other simulations)
+const REGIONS = [
+  {c:'#be8f4a',pts:[[-16,33],[-12,36],[-2,37],[8,36],[17,33],[26,30],[33,30],[38,28],[40,22],[40,13],[38,8],[32,3],[30,0],[24,-2],[16,-2],[10,0],[5,3],[0,5],[-5,4],[-10,4],[-15,5],[-17,8],[-16,16],[-16,33]]},
+  {c:'#4a8028',pts:[[-16,16],[-15,5],[-10,4],[-5,4],[0,5],[5,3],[10,0],[10,-5],[6,-9],[2,-10],[-2,-8],[-6,-5],[-10,-2],[-14,3],[-16,8],[-16,16]]},
+  {c:'#245e18',pts:[[10,0],[16,-1],[22,-3],[28,-1],[32,3],[30,5],[26,4],[22,-2],[20,-6],[17,-9],[13,-8],[10,-5],[10,0]]},
+  {c:'#8a7838',pts:[[32,3],[35,8],[38,12],[42,13],[46,11],[44,8],[43,3],[44,0],[42,-4],[40,-6],[38,-2],[35,4],[32,5],[30,3],[32,3]]},
+  {c:'#588028',pts:[[10,-5],[13,-8],[17,-9],[20,-6],[22,-2],[26,4],[30,3],[32,5],[35,4],[38,-2],[40,-6],[42,-11],[40,-18],[38,-25],[35,-35],[28,-36],[22,-34],[17,-30],[14,-24],[12,-17],[10,-12],[7,-9],[5,-6],[3,-2],[5,3],[10,0],[10,-5]]},
+  {c:'#c8a050',pts:[[35,30],[37,28],[40,24],[43,21],[48,18],[52,14],[57,11],[60,11],[57,15],[55,20],[52,24],[47,24],[45,22],[43,18],[40,16],[38,22],[35,28],[35,30]]},
+  {c:'#b09055',pts:[[32,30],[36,33],[38,35],[42,37],[47,37],[50,34],[52,31],[50,28],[47,27],[44,28],[42,22],[40,24],[38,28],[35,30],[35,33],[32,33],[32,30]]},
+  {c:'#c0a050',pts:[[30,29],[32,31],[35,30],[34,26],[31,25],[30,29]]},
+  {c:'#689840',pts:[[-10,36],[-8,38],[-5,42],[-3,44],[0,46],[5,48],[8,47],[10,48],[14,48],[18,50],[22,50],[27,50],[30,47],[28,44],[32,41],[28,38],[24,38],[22,38],[20,38],[18,40],[16,40],[14,36],[13,38],[11,44],[8,44],[5,44],[0,43],[-3,43],[-7,40],[-8,38],[-10,36]]},
+  {c:'#8a9c48',pts:[[-10,36],[-9,39],[-8,41],[-5,44],[0,46],[0,43],[0,40],[-3,38],[-5,36],[-8,36],[-10,36]]},
+  {c:'#989a56',pts:[[26,38],[28,38],[30,41],[36,40],[40,37],[42,37],[40,36],[36,37],[32,36],[28,36],[26,36],[26,38]]},
+  {c:'#9a9858',pts:[[44,28],[47,27],[50,28],[52,31],[56,28],[60,24],[57,22],[55,22],[52,24],[47,24],[44,26],[44,28]]},
+  {c:'#5a8833',pts:[[5,55],[8,57],[10,58],[14,58],[18,60],[22,63],[20,67],[16,68],[12,65],[10,63],[8,59],[5,56],[5,55]]},
+  {c:'#5e8838',pts:[[-5,50],[0,52],[1,52],[-2,57],[-4,58],[-6,55],[-5,50]]},
+  {c:'#588830',pts:[[43,-12],[46,-14],[50,-18],[50,-23],[48,-25],[46,-25],[43,-22],[43,-17],[43,-12]]},
+  {c:'#c8e0f0',pts:[[-52,60],[-42,62],[-30,63],[-20,65],[-18,72],[-24,80],[-40,83],[-52,78],[-56,70],[-52,60]]},
+  {c:'#789040',pts:[[65,22],[68,20],[72,18],[76,14],[78,8],[75,10],[72,12],[68,14],[65,18],[62,20],[65,22]]},
+];
+
+// Three beam latitudes
+const BEAMS = [
+  { lat: 0,    color:'rgba(255,100,100,0.9)', label:'0° — קו המשווה',   width: 22 },
+  { lat: 31,   color:'rgba(255,160,40,0.9)',  label:'31°N — ישראל',     width: 22 },
+  { lat: 56,   color:'rgba(80,200,255,0.9)',  label:'56°N — מוסקבה',    width: 22 },
+];
+
+let activeBeam = -1;
+
+// Beam geometry: horizontal ray at height h hits left face of Earth
+// At that point surface normal = (-cos(lat), sin(lat)) effectively
+// Footprint spread = 1/cos(lat), intensity = cos(lat)
+function computeBeam(lat_deg) {
+  const lat    = lat_deg * Math.PI / 180;
+  const h      = R * Math.sin(lat);
+  const xHit   = -Math.sqrt(R * R - h * h); // left face (negative)
+  const cosLat = Math.cos(lat);
+  const spread = 1 / cosLat;
+  const intensity = cosLat;
+  const angleDeg  = 90 - lat_deg;
+  return { h, xHit, spread, intensity, angleDeg };
+}
+
+// Draw a horizontal beam from left edge to Earth surface (left face)
+function drawBeam(beam, index, highlight) {
+  const { lat, color, width } = beam;
+  const b     = computeBeam(lat);
+  const hitX  = ECX + b.xHit;
+  const hitY  = ECY - b.h;
+  const halfW = width / 2;
+  const alpha = highlight ? 1.0 : 0.55;
+
+  // Incoming rays
+  ctx.strokeStyle = color.replace('0.9', alpha.toFixed(2));
+  ctx.lineWidth   = highlight ? 2 : 1.2;
+  ctx.beginPath(); ctx.moveTo(10, hitY - halfW); ctx.lineTo(hitX, hitY - halfW); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10, hitY + halfW); ctx.lineTo(hitX, hitY + halfW); ctx.stroke();
+  ctx.fillStyle = color.replace('0.9', (alpha * 0.18).toFixed(2));
+  ctx.fillRect(10, hitY - halfW, hitX - 10, width);
+
+  // Arrowhead
+  ctx.fillStyle = color.replace('0.9', (alpha * 0.8).toFixed(2));
+  ctx.beginPath();
+  ctx.moveTo(hitX + 2, hitY);
+  ctx.lineTo(hitX - 8, hitY - halfW - 3);
+  ctx.lineTo(hitX - 8, hitY + halfW + 3);
+  ctx.closePath(); ctx.fill();
+
+  // Footprint arc on Earth surface
+  const upperH   = b.h + halfW;
+  const lowerH   = b.h - halfW;
+  const upperLat = Math.asin(Math.min(1,  upperH / R));
+  const lowerLat = Math.asin(Math.max(-1, lowerH / R));
+  const startAngle = Math.PI - upperLat;
+  const endAngle   = Math.PI - lowerLat;
+
+  ctx.strokeStyle = color.replace('0.9', (alpha * 1.1).toFixed(2));
+  ctx.lineWidth   = highlight ? 5 : 3;
+  ctx.lineCap     = 'round';
+  ctx.beginPath(); ctx.arc(ECX, ECY, R, startAngle, endAngle); ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  if (highlight) {
+    // Spread factor label
+    const midAngle = (startAngle + endAngle) / 2;
+    const labelX   = ECX + (R + 20) * Math.cos(midAngle);
+    const labelY   = ECY + (R + 20) * Math.sin(midAngle);
+    ctx.font = 'bold 10px system-ui'; ctx.fillStyle = color; ctx.textAlign = 'left';
+    ctx.fillText('×' + b.spread.toFixed(2), labelX + 4, labelY + 3);
+
+    // Surface normal indicator
+    const nx = ECX + b.xHit, ny = ECY - b.h;
+    const normLen = 35;
+    const normX = nx + (b.xHit / R) * normLen, normY = ny - (b.h / R) * normLen;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(normX, normY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Angle label
+    ctx.font = '9px system-ui'; ctx.fillStyle = 'rgba(255,255,200,0.9)'; ctx.textAlign = 'center';
+    ctx.fillText(Math.round(b.angleDeg) + '°', normX - 4, normY - 4);
+  }
+}
+
+function drawEarth() {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(ECX, ECY, R, 0, Math.PI * 2); ctx.clip();
+
+  // Night base
+  ctx.fillStyle = '#030b18'; ctx.fillRect(ECX-R-2, ECY-R-2, 2*R+4, 2*R+4);
+
+  // Ocean day gradient — left half (sun is on left)
+  const og = ctx.createRadialGradient(ECX-R*.35, ECY-R*.22, R*.08, ECX, ECY, R);
+  og.addColorStop(0, '#52b8e5'); og.addColorStop(.25, '#1878b8');
+  og.addColorStop(.65, '#0c4278'); og.addColorStop(.9, '#071c50'); og.addColorStop(1, '#020c18');
+  ctx.beginPath();
+  ctx.arc(ECX, ECY, R, Math.PI/2, 3*Math.PI/2); // left semicircle
+  ctx.lineTo(ECX, ECY); ctx.closePath();
+  ctx.fillStyle = og; ctx.fill();
+
+  // Continents
+  REGIONS.forEach(reg => fillR(reg.pts, reg.c));
+
+  // Polar ice caps
+  const nPole = proj(0, 90), sPole = proj(0, -90);
+  if (nPole) { ctx.beginPath(); ctx.arc(nPole[0], nPole[1], R*.15, 0, Math.PI*2); ctx.fillStyle='#cce8f5'; ctx.fill(); }
+  if (sPole) { ctx.beginPath(); ctx.arc(sPole[0], sPole[1], R*.19, 0, Math.PI*2); ctx.fillStyle='#d8eef5'; ctx.fill(); }
+
+  // Night overlay — right half
+  ctx.beginPath();
+  ctx.arc(ECX, ECY, R, -Math.PI/2, Math.PI/2); // right semicircle
+  ctx.lineTo(ECX, ECY); ctx.closePath();
+  ctx.fillStyle = 'rgba(2,8,22,.89)'; ctx.fill();
+
+  // 3D sphere shading (highlight on left = sun side)
+  const sh = ctx.createRadialGradient(ECX-R*.32, ECY-R*.22, R*.05, ECX, ECY, R);
+  sh.addColorStop(0, 'rgba(255,255,255,.18)'); sh.addColorStop(.38, 'rgba(255,255,255,.03)');
+  sh.addColorStop(.82, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,30,.34)');
+  ctx.fillStyle = sh; ctx.beginPath(); ctx.arc(ECX, ECY, R, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+
+  // Outline
+  ctx.strokeStyle = 'rgba(0,160,220,.45)'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(ECX, ECY, R, 0, Math.PI*2); ctx.stroke();
+
+  // Atmosphere glow
+  const atm = ctx.createRadialGradient(ECX, ECY, R-2, ECX, ECY, R+14);
+  atm.addColorStop(0, 'rgba(60,160,255,.22)'); atm.addColorStop(1, 'transparent');
+  ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(ECX, ECY, R+14, 0, Math.PI*2); ctx.fill();
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07101f'; ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  if (!render._stars) render._stars = Array.from({length:55}, () => [Math.random()*W, Math.random()*H, Math.random()*1.1+0.3]);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  render._stars.forEach(([x,y,r]) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); });
+
+  // Sun (off left edge)
+  const sunGrad = ctx.createRadialGradient(-5, ECY, 5, -5, ECY, 60);
+  sunGrad.addColorStop(0, 'rgba(255,240,150,0.9)');
+  sunGrad.addColorStop(1, 'rgba(255,140,0,0)');
+  ctx.fillStyle = sunGrad; ctx.beginPath(); ctx.arc(-5, ECY, 60, 0, Math.PI*2); ctx.fill();
+
+  // Beams (drawn first, behind Earth)
+  BEAMS.forEach((b, i) => { if (i !== activeBeam) drawBeam(b, i, false); });
+  if (activeBeam >= 0) drawBeam(BEAMS[activeBeam], activeBeam, true);
+
+  // Earth (realistic orthographic)
+  drawEarth();
+
+  // ── Axis — always upper-right at 23.5° ──
+  const aL   = R + 16;
+  const axNX = ECX + aL*sinT, axNY = ECY - aL*cosT;
+  const axSX = ECX - aL*sinT, axSY = ECY + aL*cosT;
+  ctx.strokeStyle = '#ffd060'; ctx.lineWidth = 1.8; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(axSX, axSY); ctx.lineTo(axNX, axNY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = 'bold 8px system-ui'; ctx.fillStyle = '#ffd060'; ctx.textAlign = 'center';
+  ctx.fillText('N', axNX, axNY - 5);
+
+  // ── Equator line — tilted at 23.5° (perpendicular to axis) ──
+  // phi=0: center=(ECX,ECY), half-extents=(R·cosT, R·sinT)
+  ctx.strokeStyle = 'rgba(255,80,80,0.75)';
+  ctx.lineWidth   = 1.2; ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  ctx.moveTo(ECX - R*cosT, ECY - R*sinT);  // upper-left end
+  ctx.lineTo(ECX + R*cosT, ECY + R*sinT);  // lower-right end
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Latitude markers (dots on left face where beams hit) ──
+  [0, 31, 56].forEach((lat, i) => {
+    const latRad = lat * Math.PI / 180;
+    const px = ECX - R * Math.cos(latRad);  // left face hit point
+    const py = ECY - R * Math.sin(latRad);
+    const colors = ['rgba(255,100,100,0.9)', 'rgba(255,160,40,0.9)', 'rgba(80,200,255,0.9)'];
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2);
+    ctx.fillStyle = colors[i]; ctx.fill();
+
+    // Label on right edge of globe at same latitude
+    const labelX = ECX + R * Math.cos(latRad) + 6;
+    const labelY = ECY - R * Math.sin(latRad) + 3;
+    ctx.font = '9px system-ui'; ctx.fillStyle = colors[i]; ctx.textAlign = 'left';
+    ctx.fillText(lat + '°N', labelX, labelY);
+  });
+
+  // "קרני שמש" label
+  ctx.font = '9px system-ui'; ctx.fillStyle = 'rgba(255,210,0,0.6)';
+  ctx.textAlign = 'center'; ctx.fillText('קרני שמש', 60, ECY - 70);
+
+  // ── Update info cards ──
+  const b0 = computeBeam(0), b1 = computeBeam(31), b2 = computeBeam(56);
+  document.getElementById('eq-area').textContent = 'שטח פגיעה: ×' + b0.spread.toFixed(2);
+  document.getElementById('eq-int').textContent  = 'עצמת חום: '   + Math.round(b0.intensity*100) + '%';
+  document.getElementById('il-area').textContent = 'שטח פגיעה: ×' + b1.spread.toFixed(2);
+  document.getElementById('il-int').textContent  = 'עצמת חום: '   + Math.round(b1.intensity*100) + '%';
+  document.getElementById('mo-area').textContent = 'שטח פגיעה: ×' + b2.spread.toFixed(2);
+  document.getElementById('mo-int').textContent  = 'עצמת חום: '   + Math.round(b2.intensity*100) + '%';
+}
+
+render();
+
+// Click to highlight beam closest to click latitude
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleY = H / rect.height;
+  const cy = (e.clientY - rect.top) * scaleY;
+  const dy = ECY - cy;
+  if (Math.abs(dy) > R) { activeBeam = -1; render(); return; }
+  const clickLat = Math.asin(Math.max(-1, Math.min(1, dy / R))) * 180 / Math.PI;
+
+  let closest = 0, minDist = Infinity;
+  BEAMS.forEach((b, i) => {
+    const d = Math.abs(b.lat - clickLat);
+    if (d < minDist) { minDist = d; closest = i; }
+  });
+  activeBeam = (activeBeam === closest) ? -1 : closest;
+  render();
+});
+</script>
+</body>
+</html>
