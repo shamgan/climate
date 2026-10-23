@@ -1,0 +1,29 @@
+name: Build atlas climatology
+on:
+  push:
+    paths:
+      - 'atlas/scripts/build_climatology.py'
+      - '.github/workflows/build-atlas-climatology.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prepare-monthly-layers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install scientific data readers
+        run: python -m pip install 'numpy>=2,<3' 'xarray>=2025,<2027' 'netCDF4>=1.7,<2'
+      - name: Build and validate climatology
+        run: python atlas/scripts/build_climatology.py
+      - name: Save prepared atlas data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atlas/data/climatology.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Prepare January and July climate normals for atlas layers"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
