@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "title": "NOAA ETOPO1 Ice Surface, sampled at 0.1 degrees",
+  "sourceYear": 2009,
+  "retrievedAt": "2026-10-23T21:02:24.006017+00:00",
+  "kind": "data",
+  "units": "m",
+  "horizontalDatum": "WGS84",
+  "verticalDatum": "sea level",
+  "grid": {
+    "width": 3600,
+    "height": 1801,
+    "longitudeStart": -180,
+    "latitudeStart": 90,
+    "longitudeStep": 0.1,
+    "latitudeStep": -0.1,
+    "registration": "node",
+    "longitudeWraps": true
+  },
+  "encoding": {
+    "dtype": "int16",
+    "byteOrder": "little-endian",
+    "compression": "gzip",
+    "order": "row-major",
+    "scale": 1,
+    "offset": 0,
+    "noData": 32767
+  },
+  "file": {
+    "url": "data/terrain/elevation-01deg.bin.gz",
+    "bytes": 10166799,
+    "uncompressedBytes": 12967200,
+    "sha256": "4151f63d2fd138d429aa6ed7cb3b4671acd64e889b57fb8778278b9886aed81b"
+  },
+  "source": {
+    "name": "NOAA NGDC ETOPO1 Ice Surface",
+    "url": "https://data.pmel.noaa.gov/socat/erddap/griddap/etopo180.html",
+    "documentation": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.dem%3A316/html",
+    "downloadUrl": "https://data.pmel.noaa.gov/socat/erddap/griddap/etopo180.nc?altitude%5B0:6:10800%5D%5B0:6:21594%5D",
+    "downloadSha256": "421f1d6751804ee02f8b99227b803b4ca889ac88120929daf08feb5d16aa6c0d",
+    "originalGridStepDegrees": 0.016666666666666666,
+    "citation": "Amante, C. and B. W. Eakins (2009). ETOPO1 1 Arc-Minute Global Relief Model. NOAA Technical Memorandum NESDIS NGDC-24. https://doi.org/10.7289/V5C8276M",
+    "license": "Data may be used and redistributed for free; see source dataset license."
+  },
+  "processing": "Every sixth ETOPO1 source node is retained. Source rows reversed to north-to-south; repeated +180 degree column omitted. No interpolation, averaging, smoothing or estimated heights.",
+  "limitations": [
+    "This is a sampled regional-relief model, not a survey of local peaks.",
+    "The full source includes negative ocean-floor values and below-sea-level land. Clip rendering to the land geometry; do not infer land/ocean solely from the sign.",
+    "Heights over Greenland and Antarctica represent ice surface.",
+    "Source is ETOPO1 (2009), not the newer ETOPO 2022 model."
+  ],
+  "preview": {
+    "url": "data/terrain/preview-1deg.bin.gz",
+    "width": 360,
+    "height": 181,
+    "longitudeStart": -180,
+    "latitudeStart": 90,
+    "longitudeStep": 1,
+    "latitudeStep": -1,
+    "bytes": 110442,
+    "sha256": "08c83c4c9f388b9f4216ffe5ecfce43a94264b53d65c8048370445e79c1f313d",
+    "purpose": "Local development preview only; production uses the 0.1-degree file."
+  },
+  "validationSamples": [
+    {
+      "place": "Tibetan plateau",
+      "longitude": 88,
+      "latitude": 33,
+      "elevationMeters": 5061,
+      "expectedRangeMeters": [
+        3500,
+        6000
+      ]
+    },
+    {
+      "place": "Central Greenland ice surface",
+      "longitude": -40,
+      "latitude": 72,
+      "elevationMeters": 3100,
+      "expectedRangeMeters": [
+        1500,
+        3600
+      ]
+    },
+    {
+      "place": "Denver area",
+      "longitude": -105,
+      "latitude": 39.7,
+      "elevationMeters": 1606,
+      "expectedRangeMeters": [
+        1400,
+        2100
+      ]
+    },
+    {
+      "place": "Andes plateau",
+      "longitude": -68,
+      "latitude": -17,
+      "elevationMeters": 4200,
+      "expectedRangeMeters": [
+        3000,
+        6000
+      ]
+    },
+    {
+      "place": "Amazon lowland",
+      "longitude": -60,
+      "latitude": -3,
+      "elevationMeters": 53,
+      "expectedRangeMeters": [
+        0,
+        300
+      ]
+    },
+    {
+      "place": "Equatorial Pacific seabed",
+      "longitude": -150,
+      "latitude": 0,
+      "elevationMeters": -4305,
+      "expectedRangeMeters": [
+        -6500,
+        -3000
+      ]
+    }
+  ],
+  "rangeMeters": [
+    -10714,
+    8266
+  ]
+}
