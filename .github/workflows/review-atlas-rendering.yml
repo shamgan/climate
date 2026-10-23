@@ -5,21 +5,24 @@ on:
       - '.github/workflows/review-atlas-rendering.yml'
 permissions:
   contents: write
+  actions: read
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
-      - run: |
-          python -m pip install playwright==1.58.0
-          python -m playwright install --with-deps chromium
-          python -u atlas/scripts/check_browser.py
-      - name: Preserve review screenshots on a separate review branch
+      - uses: actions/download-artifact@v4
+        with:
+          name: atlas-browser-previews
+          run-id: 39969345895
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: atlas
+      - name: Preserve reviewed build screenshots
         run: |
-          git checkout -b atlas-render-review-20261023
+          git checkout -b atlas-render-review-ready-20261023
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add atlas/*.png
-          git commit -m "Capture rendered atlas review evidence"
-          git push origin HEAD:atlas-render-review-20261023
+          git commit -m "Preserve screenshots from tested build 8c04cd9"
+          git push origin HEAD:atlas-render-review-ready-20261023
