@@ -1,4 +1,4 @@
-import functools, http.server, json, pathlib, threading
+import functools, http.server, json, pathlib, threading, gzip, struct
 from playwright.sync_api import sync_playwright
 
 root=pathlib.Path(__file__).parent
@@ -18,6 +18,18 @@ with sync_playwright() as p:
     assert page.locator('.latitude-label').count()==10
     page.locator('#currentsToggle').click()
     assert page.locator('#currentLegend').is_visible()
+    assert page.locator('#currentSelect option').count()==30
+    assert page.locator('.current-map-label').count()>=3
+    page.locator('#currentSelect').select_option('gulf')
+    assert page.locator('.current-card dd').count()==4
+    assert page.locator('.current-source a').count()>=1
+    page.locator('#currentBasin').select_option('indian')
+    page.locator('#currentSelect').select_option('leeuwin')
+    assert 'דרומה' in page.locator('#currentDetails').inner_text()
+    page.locator('#focusCurrent').click()
+    assert page.evaluate('state.zoom')==3
+    page.locator('#resetView').click()
+    page.locator('#currentBasin').select_option('all')
     jan=page.locator('#map').evaluate('(c)=>c.toDataURL()')
     page.locator('[data-month="7"]').click()
     jul=page.locator('#map').evaluate('(c)=>c.toDataURL()')
@@ -35,6 +47,23 @@ with sync_playwright() as p:
     page.locator('#currentsToggle').click()
     page.locator('#showLabels').click()
     page.screenshot(path=str(root/'temperature-desktop.png'),full_page=True)
+    # Independently check readout values against the actual encoded source grid.
+    manifest=json.loads((root/'data/era5/manifest.json').read_text())
+    assert manifest['gridStepDegrees']==.25
+    for key in ['temperature','precipitation']:
+        layer=manifest['layers'][key]
+        assert len(layer['latitudes'])==721 and len(layer['longitudes'])==1440
+        row=min(range(721),key=lambda i:abs(layer['latitudes'][i]-19.1))
+        col=min(range(1440),key=lambda i:abs(layer['longitudes'][i]-72.9))
+        for month in [1,7]:
+            raw=gzip.decompress((root/layer['frames'][str(month)]['url']).read_bytes())
+            value=struct.unpack_from('<H',raw,2*(row*1440+col))[0]/10+layer['offset']
+            expected=f'{value:.1f}' if key=='temperature' else str(round(value))
+            assert expected in page.locator('#pointReadout').inner_text(),(key,month,expected)
+    page.locator('#zoomIn').click()
+    page.locator('#zoomIn').click()
+    page.screenshot(path=str(root/'temperature-zoom.png'),full_page=True)
+    page.locator('#resetView').click()
     jan=page.locator('#fieldLegend').inner_text().split('\n')[1:]
     page.locator('[data-month="1"]').click()
     assert jan==page.locator('#fieldLegend').inner_text().split('\n')[1:],'Legend scale must remain fixed'
@@ -62,16 +91,16 @@ with sync_playwright() as p:
     assert page.locator('#latitudeLabels').is_visible()
     # Failed data fetch must be visible and retry must restore the real data.
     retry=browser.new_page()
-    retry.route('**/data/climatology.json*',lambda route:route.fulfill(status=503,body='unavailable'))
+    retry.route('**/data/era5/manifest.json*',lambda route:route.fulfill(status=503,body='unavailable'))
     retry.goto(url)
     retry.wait_for_function('ready === true')
     retry.locator('[data-field="temperature"]').click()
     retry.locator('#retryLayer').wait_for()
     assert not retry.locator('.legend').is_visible()
-    retry.unroute('**/data/climatology.json*')
+    retry.unroute('**/data/era5/manifest.json*')
     retry.locator('#retryLayer').click()
     retry.wait_for_function('document.querySelector("#layerStatus").hidden === true')
     assert not errors,errors
-    print('BROWSER_CHECKS_PASSED: month switch, exclusive fields, currents overlay, latitude labels, climate return, mobile overflow, loading retry; no runtime errors')
+    print('BROWSER_CHECKS_PASSED: actual ERA5 cell values, 29 current descriptions, filtering, focus, map names, month switch, exclusive fields, climate return, mobile overflow, loading retry; no runtime errors')
     browser.close()
 server.shutdown()

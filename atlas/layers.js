@@ -1,8 +1,8 @@
 'use strict';
 /* Monthly NOAA climate normals and independently drawn schematic major currents. */
-function createClimateLayers({getMap,refresh}) {
+function createClimateLayers({getMap,refresh,focus}) {
  const $=s=>document.querySelector(s);
- const settings={field:null,month:1,currents:false,current:'',point:null};
+ const settings={field:null,month:1,currents:false,current:'',point:null,currentLabels:true,currentBasin:'all',currentType:'all'};
  const months={1:'ינואר',7:'יולי'};
  const fields={
   temperature:{name:'ממוצע טמפרטורות',unit:'°C',description:'טמפרטורת האוויר בגובה 2 מטרים',ticks:[-65,-40,-20,0,10,20,30,40],colors:['#36205b','#5055a0','#4d9dcc','#e6f2f0','#f9e49b','#eead60','#d95e3d','#9a1830']},
@@ -35,10 +35,13 @@ function createClimateLayers({getMap,refresh}) {
   ['circumpolar','הזרם המקיף את אנטארקטיקה','cold',[[-178,-57],[-140,-57],[-100,-57],[-65,-59],[-30,-55],[10,-53],[50,-52],[90,-53],[130,-55],[178,-57]]],
   ['somali','הזרם הסומלי','seasonal',[[44,-1],[47,3],[50,7],[53,11]]],
   ['monsoon','זרם המונסון מדרום להודו','seasonal',[[60,5],[70,5],[79,4],[85,6],[88,10]]]
- ].map(([id,name,type,points])=>({id,name,type,points}));
+ ].map(([id,name,type,points])=>({id,name,type,points})).concat(extraAtlasCurrents);
  const currentColors={warm:'#c63532',cold:'#1265ad',seasonal:'#76439c'};
  const currentTypes={warm:'זרם חם',cold:'זרם קר',seasonal:'זרם המשנה כיוון לפי העונה'};
- let data=null,pending=null,error='',rasters=new Map(),currentPaths=[];
+ let data=null,pending=null,error='',rasters=new Map(),currentPaths=[],palettes=new Map();
+ const littleEndian=new Uint8Array(new Uint32Array([0x01020304]).buffer)[0]===4;
+ const basins={atlantic:'האוקיינוס האטלנטי',pacific:'האוקיינוס השקט',indian:'האוקיינוס ההודי',southern:'האוקיינוס הדרומי'};
+ const visibleCurrents=()=>currents.filter(c=>(settings.currentBasin==='all'||currentFacts[c.id][0]===settings.currentBasin)&&(settings.currentType==='all'||c.type===settings.currentType));
  const scales=Object.fromEntries(Object.entries(fields).map(([key,f])=>[key,d3.scaleLinear().domain(f.ticks).range(f.colors).clamp(true)]));
  function currentPoints(c){return c.type==='seasonal'&&settings.month===1?[...c.points].reverse():c.points;}
  function currentExplanation(c){
@@ -52,58 +55,80 @@ function createClimateLayers({getMap,refresh}) {
   return lo>0&&Math.abs(values[lo-1]-value)<Math.abs(values[lo]-value)?lo-1:lo;
  }
  function cellAt(layer,lon,lat){
-  const row=nearest(layer.latitudes,lat,true),col=nearest(layer.longitudes,lon);
-  // Longitude is circular: the nearest cell can be across the date line.
-  const last=layer.longitudes.length-1;
-  const distance=i=>Math.min(Math.abs(layer.longitudes[i]-lon),360-Math.abs(layer.longitudes[i]-lon));
-  let column=col;if(distance(0)<distance(column))column=0;if(distance(last)<distance(column))column=last;
-  return row*layer.longitudes.length+column;
+  const n=layer.longitudes.length,row=Math.max(0,Math.min(layer.latitudes.length-1,Math.round((layer.latitudes[0]-lat)/.25)));
+  const col=((Math.round((lon-layer.longitudes[0])/.25)%n)+n)%n;
+  return row*n+col;
  }
- function valueAt(key,month,point){if(!data||!point)return null;const layer=data.layers[key],v=layer.values[month][cellAt(layer,...point)];return v==null?null:v*layer.scale;}
+ function valueAt(key,month,point){if(!data||!point)return null;const layer=data.layers[key],v=layer.values[month][cellAt(layer,...point)];return v==null||v===65535?null:v*layer.scale+layer.offset;}
  function formatValue(key,v){return v==null?'אין נתון':(key==='temperature'?v.toFixed(1):Math.round(v))+' '+fields[key].unit;}
  function coordinate(point){return '<bdi dir="ltr">'+Math.abs(point[1]).toFixed(1)+'°'+(point[1]<0?'S':'N')+' · '+Math.abs(point[0]).toFixed(1)+'°'+(point[0]<0?'W':'E')+'</bdi>';}
  function validateDataset(d){
-  if(d.schemaVersion!==1||d.period!=='1991–2020')throw Error('Unexpected climate dataset');
+  if(d.schemaVersion!==2||d.period!=='1991–2020'||d.gridStepDegrees!==.25)throw Error('Unexpected ERA5 dataset');
   for(const key of Object.keys(fields)){
-   const l=d.layers[key];if(!l||l.scale!==.1||l.latitudes.length<50||l.longitudes.length<100)throw Error('Invalid climate grid');
-   if(!l.latitudes.every((v,i,a)=>Number.isFinite(v)&&(!i||v<a[i-1]))||!l.longitudes.every((v,i,a)=>Number.isFinite(v)&&(!i||v>a[i-1])))throw Error('Invalid coordinates');
-   for(const month of [1,7])if(l.values[month].length!==l.latitudes.length*l.longitudes.length)throw Error('Invalid monthly data');
+   const l=d.layers[key];if(!l||l.scale!==.1||![720,721].includes(l.latitudes.length)||l.longitudes.length!==1440)throw Error('Invalid quarter-degree grid');
+   if(!l.latitudes.every((v,i,a)=>Number.isFinite(v)&&(!i||Math.abs(v-a[i-1]+.25)<1e-5))||!l.longitudes.every((v,i,a)=>Number.isFinite(v)&&(!i||Math.abs(v-a[i-1]-.25)<1e-5)))throw Error('Invalid coordinates');
+   for(const month of [1,7])if(!l.frames[month]?.url)throw Error('Missing monthly frame');
   }
   return d;
  }
  async function loadData(){
   if(data||pending)return pending;error='';
-  pending=fetch('data/climatology.json?v=1991-2020-1').then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();}).then(d=>{data=validateDataset(d);}).catch(e=>{error='לא ניתן לטעון את נתוני השכבה. אפשר לנסות שוב.';console.error(e);}).finally(()=>{pending=null;refresh();});
+  pending=(async()=>{
+   const response=await fetch('data/era5/manifest.json?v=2');if(!response.ok)throw Error('HTTP '+response.status);
+   const d=validateDataset(await response.json());
+   await Promise.all(Object.keys(fields).flatMap(key=>[1,7].map(async month=>{
+    const layer=d.layers[key],frame=layer.frames[month],r=await fetch(frame.url+'?v='+frame.sha256.slice(0,12));if(!r.ok)throw Error('HTTP '+r.status);
+    const compressed=await r.arrayBuffer();
+    if(compressed.byteLength!==frame.bytes)throw Error('Incomplete climate data');
+    if(globalThis.crypto?.subtle){const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',compressed)),b=>b.toString(16).padStart(2,'0')).join('');if(hash!==frame.sha256)throw Error('Climate data checksum mismatch');}
+    const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const bytes=await new Response(stream).arrayBuffer();if(bytes.byteLength!==layer.latitudes.length*layer.longitudes.length*2)throw Error('Invalid climate data size');
+    const values=new Uint16Array(bytes);if(!littleEndian){const dv=new DataView(bytes);for(let i=0;i<values.length;i++)values[i]=dv.getUint16(i*2,true);}
+    layer.values??={};layer.values[month]=values;
+   })));
+   data=d;
+  })().catch(e=>{error='לא ניתן לטעון את נתוני השכבה. אפשר לנסות שוב בדפדפן מעודכן.';console.error(e);}).finally(()=>{pending=null;refresh();});
   return pending;
  }
+ function palette(){
+  if(palettes.has(settings.field))return palettes.get(settings.field);
+  const table=new Uint32Array(65536);
+  const offset=data.layers[settings.field].offset,max=settings.field==='temperature'?1650:60000;
+  for(let v=0;v<=max;v++){const c=d3.color(scales[settings.field](v/10+offset));table[v]=littleEndian?((255<<24)|(c.b<<16)|(c.g<<8)|c.r):((c.r<<24)|(c.g<<16)|(c.b<<8)|255);}
+  palettes.set(settings.field,table);return table;
+ }
  function raster(){
-  const {projection,W,H}=getMap(),key=settings.field+':'+settings.month;
-  if(rasters.has(key))return rasters.get(key);
-  const out=document.createElement('canvas');out.width=1000;out.height=535;
-  const c=out.getContext('2d'),im=c.createImageData(out.width,out.height),l=data.layers[settings.field],values=l.values[settings.month],palette=new Map();
-  for(let y=0;y<out.height;y++)for(let x=0;x<out.width;x++){
-   const source=[(x+.5)*W/out.width,(y+.5)*H/out.height],p=projection.invert(source);
-   if(!p||!p.every(Number.isFinite)||Math.abs(p[0])>180||Math.abs(p[1])>90)continue;
-   const forward=projection(p);if(Math.abs(forward[0]-source[0])>1||Math.abs(forward[1]-source[1])>1)continue;
-   const v=values[cellAt(l,...p)];if(v==null)continue;
-   if(!palette.has(v)){const color=d3.color(scales[settings.field](v*l.scale));palette.set(v,[color.r,color.g,color.b]);}
-   const color=palette.get(v),i=(y*out.width+x)*4;im.data[i]=color[0];im.data[i+1]=color[1];im.data[i+2]=color[2];im.data[i+3]=255;
+  const {projection,canvas,view,cssW,cssH}=getMap(),pw=canvas.width,ph=canvas.height,dpr=pw/cssW;
+  const key=[settings.field,settings.month,pw,ph,view.s,view.x,view.y].join(':');if(rasters.has(key))return rasters.get(key);
+  const out=document.createElement('canvas');out.width=pw;out.height=ph;
+  const c=out.getContext('2d'),im=c.createImageData(pw,ph),pixels=new Uint32Array(im.data.buffer),l=data.layers[settings.field],values=l.values[settings.month],colors=palette(),n=l.longitudes.length;
+  // Natural Earth 1 is linear in longitude at each latitude. Invert once per screen row.
+  const origin=projection([0,0])[0];
+  for(let y=0;y<ph;y++){
+   const sourceY=((y+.5)/dpr-view.y)/view.s,p=projection.invert([origin,sourceY]);
+   if(!p||!Number.isFinite(p[1])||Math.abs(p[1])>90||Math.abs(projection([0,p[1]])[1]-sourceY)>1)continue;
+   const half=projection([180,p[1]])[0]-origin,row=Math.max(0,Math.min(l.latitudes.length-1,Math.round((l.latitudes[0]-p[1])/.25))),offset=row*n;
+   const left=(view.x+(origin-half)*view.s)*dpr,right=(view.x+(origin+half)*view.s)*dpr;
+   const first=Math.max(0,Math.ceil(left-.5)),last=Math.min(pw-1,Math.floor(right-.5)),lonStep=360/(right-left);
+   for(let x=first;x<=last;x++){
+    const lon=-180+(x+.5-left)*lonStep,col=((Math.round((lon-l.longitudes[0])/.25)%n)+n)%n;
+    pixels[y*pw+x]=colors[values[offset+col]];
+   }
   }
-  c.putImageData(im,0,0);rasters.set(key,out);return out;
+  c.putImageData(im,0,0);rasters.clear();rasters.set(key,out);return out;
  }
  function drawField(){
   if(!settings.field)return false;
-  const {ctx,W,H}=getMap();
-  // An unavailable numerical field must never show climate-classification colors.
-  if(data){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(raster(),0,0,W,H);ctx.restore();}
+  const {ctx}=getMap();
+  if(data){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(raster(),0,0);ctx.restore();}
   return true;
  }
  function drawCurrents(){
   const {ctx,projection,view}=getMap();currentPaths=[];if(!settings.currents)return;
   const s=view.s,path=d3.geoPath(projection,ctx);
-  for(const c of currents){
+  for(const c of visibleCurrents()){
    const points=currentPoints(c),line={type:'LineString',coordinates:points},selected=settings.current===c.id;
-   ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();path(line);ctx.strokeStyle='#ffffffeb';ctx.lineWidth=(selected?7:5)/s;ctx.stroke();
+   ctx.save();ctx.globalAlpha=settings.current&&!selected ? 0.38 : 1;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();path(line);ctx.strokeStyle='#ffffffeb';ctx.lineWidth=(selected?7:5)/s;ctx.stroke();
    ctx.beginPath();path(line);ctx.strokeStyle=currentColors[c.type];ctx.lineWidth=(selected?3.8:2.6)/s;if(c.type==='seasonal')ctx.setLineDash([7/s,3/s]);ctx.stroke();ctx.setLineDash([]);
    const dense=[];
    for(let j=1;j<points.length;j++){
@@ -146,7 +171,7 @@ function createClimateLayers({getMap,refresh}) {
  }
  function renderPanel(){
   const f=fields[settings.field];
-  $('#panel').innerHTML='<span class="eyebrow">ממוצעים חודשיים · 1991–2020</span><h2>'+f.name+'</h2><p class="lead">'+f.description+' ב'+months[settings.month]+'. החליפו חודש כדי להשוות בין העונות.</p><label class="sample-label" for="sampleLocation">בחירת מקום להשוואה</label><select id="sampleLocation"><option value="">בחרו עיר לדוגמה</option>'+cities.map((c,i)=>'<option value="'+i+'">'+c[0]+'</option>').join('')+'</select><p class="tiny">אפשר גם ללחוץ בכל מקום במפה.</p><div id="pointReadout">'+pointReadout()+'</div><div class="think"><h3>רגע למחשבה</h3><p>'+(settings.field==='temperature'?'כיצד משתנה הטמפרטורה בין ינואר ליולי בחצי הכדור הצפוני ובחצי הכדור הדרומי?':'השוו את ינואר ויולי במומבאי ובירושלים. באיזה חודש מופיעה העונה הגשומה בכל מקום?')+'</p></div><p class="tiny">ממוצע לתא שטח רחב, לא מדידה בתחנה בעיר. הטמפרטורה מתייחסת לאוויר גם מעל הים. המשקעים כוללים גשם ושלג בשווה ערך מים.</p><button id="backToClimate" class="secondary">חזרה לאזורי האקלים</button>';
+  $('#panel').innerHTML='<span class="eyebrow">ממוצעים חודשיים · 1991–2020</span><h2>'+f.name+'</h2><p class="lead">'+f.description+' ב'+months[settings.month]+'. החליפו חודש כדי להשוות בין העונות.</p><label class="sample-label" for="sampleLocation">בחירת מקום להשוואה</label><select id="sampleLocation"><option value="">בחרו עיר לדוגמה</option>'+cities.map((c,i)=>'<option value="'+i+'">'+c[0]+'</option>').join('')+'</select><p class="tiny">אפשר גם ללחוץ בכל מקום במפה.</p><div id="pointReadout">'+pointReadout()+'</div><div class="think"><h3>רגע למחשבה</h3><p>'+(settings.field==='temperature'?'כיצד משתנה הטמפרטורה בין ינואר ליולי בחצי הכדור הצפוני ובחצי הכדור הדרומי?':'השוו את ינואר ויולי במומבאי ובירושלים. באיזה חודש מופיעה העונה הגשומה בכל מקום?')+'</p></div><p class="tiny">רשת נתונים של רבע מעלה, כ־28 ק״מ בכיוון צפון–דרום. ממוצע לתא השטח, לא מדידה בתחנה בעיר. הטמפרטורה מתייחסת לאוויר גם מעל הים. המשקעים כוללים גשם ושלג בשווה ערך מים.</p><button id="backToClimate" class="secondary">חזרה לאזורי האקלים</button>';
   $('#sampleLocation').onchange=e=>{if(e.target.value!==''){const city=cities[Number(e.target.value)];settings.point=city.slice(1);$('#pointReadout').innerHTML='<strong>'+city[0]+'</strong>'+pointReadout();}};
   $('#backToClimate').onclick=()=>{settings.field=null;refresh();};
  }
@@ -169,20 +194,56 @@ function createClimateLayers({getMap,refresh}) {
    const percent=v=>100*(v-f.ticks[0])/(f.ticks.at(-1)-f.ticks[0]);
    const gradient=f.colors.map((color,i)=>color+' '+percent(f.ticks[i])+'%').join(',');
    const legendTicks=settings.field==='temperature'?[-65,-40,-20,0,20,40]:[0,100,200,400,600,900];
-   $('#fieldLegend').innerHTML='<h3>'+f.name+' · '+months[settings.month]+' <bdi>'+f.unit+'</bdi></h3><div class="field-gradient" style="background:linear-gradient(to right,'+gradient+')"></div><div class="field-ticks">'+legendTicks.map(v=>'<span style="left:'+percent(v)+'%">'+v+'</span>').join('')+'</div><p class="tiny">'+(settings.field==='temperature'?'טמפרטורת אוויר בגובה 2 מ׳ · NCEP/DOE Reanalysis 2':'ממוצע כמות חודשית · GPCP v2.3')+' · NOAA PSL · 1991–2020. אותו סולם צבעים בינואר וביולי. דגימה לפי תא השטח הקרוב.</p>';
+   $('#fieldLegend').innerHTML='<h3>'+f.name+' · '+months[settings.month]+' <bdi>'+f.unit+'</bdi></h3><div class="field-gradient" style="background:linear-gradient(to right,'+gradient+')"></div><div class="field-ticks">'+legendTicks.map(v=>'<span style="left:'+percent(v)+'%">'+(v===f.ticks.at(-1)?v+'+':v)+'</span>').join('')+'</div><p class="tiny">'+(settings.field==='temperature'?'טמפרטורת אוויר סמוך לפני השטח · ERA5':'ממוצע כמות חודשית · ERA5')+' · Copernicus / World Bank CCKP · 1991–2020. רשת 0.25° × 0.25°. אותו סולם צבעים בשני החודשים. הגדילו לצפייה בפרטים. סימן + מציין גם ערכים גבוהים מסף הסולם.</p>';
    renderPanel();
   }
   if(settings.currents){
-   $('#currentSelect').value=settings.current;const c=currents.find(c=>c.id===settings.current);
-   $('#currentDescription').textContent=c?currentExplanation(c):'בחרו זרם ברשימה או במפה להצגת שמו. אדום: חם; כחול: קר; סגול מקווקו: שינוי כיוון עונתי.';
-   $('#seasonalNote').textContent='תצוגת '+months[settings.month]+': '+(settings.month===1?'הזרם הסומלי דרומה וזרם המונסון מערבה.':'הזרם הסומלי צפונה וזרם המונסון מזרחה.')+' יתר המסלולים מציגים דפוס כללי בשני החודשים, ללא מדידה חודשית של מיקום או מהירות.';
+   const available=visibleCurrents();
+   $('#currentSelect').innerHTML='<option value="">כל הזרמים בתצוגה ('+available.length+')</option>'+available.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
+   $('#currentSelect').value=settings.current;
+   $('#currentLabelsToggle').setAttribute('aria-pressed',settings.currentLabels);
+   $('#currentBasin').value=settings.currentBasin;$('#currentType').value=settings.currentType;
+   const current=currents.find(c=>c.id===settings.current);
+   $('#currentDescription').textContent=current?currentExplanation(current):'לחצו על זרם במפה או בחרו אותו ברשימה. בשמו, בכיוון ובכרטיס ההסבר מופיע המידע על אותו זרם.';
+   $('#currentDetails').innerHTML=current?currentCard(current):'<div class="current-intro"><p><strong>מה לומדים מהחצים?</strong> הכיוון מציין לאן המים זורמים. חם וקר הם תיאורים יחסיים לסביבה.</p><p>זרם חם מסיע חום; מים קרים עשויים לקרר את האוויר שמעליהם ולעודד ערפל בתנאים מתאימים. זרם לבדו אינו קובע את כמות המשקעים בחוף.</p><p class="tiny">שמות נוספים מופיעים בהגדלה. אפשר לסנן לפי אוקיינוס ולפי אופי הזרם.</p></div>';
+   $('#focusCurrent').hidden=!current;$('#resetCurrent').hidden=!current;
+   $('#seasonalNote').textContent='תצוגת '+months[settings.month]+': '+(settings.month===1?'הזרם הסומלי דרומה וזרם המונסון מערבה.':'הזרם הסומלי צפונה וזרם המונסון מזרחה.')+' המסלולים סכמטיים; אין כאן מדידת מהירות חודשית.';
   }
+
   $('#map').setAttribute('aria-label',active?f.name+' ב'+months[settings.month]+'. ניתן לבחור עיר ברשימה לקבלת ערכים. חיצים להזזה, פלוס ומינוס לזום, Home לאיפוס.':'מפת אזורי אקלים. בחירת אזור במקרא. חיצים להזזה, פלוס ומינוס לזום, Home לאיפוס.');
  }
+ function currentCard(c){
+  const [basin,route,direction,influence,sources]=currentFacts[c.id];
+  return '<article class="current-card" style="--current-color:'+currentColors[c.type]+'"><div class="current-card-title"><h4>'+c.name+'</h4><span>'+currentTypes[c.type]+'</span></div><dl><div><dt>איפה?</dt><dd>'+basins[basin]+'. '+route+'</dd></div><div><dt>לאיזה כיוון?</dt><dd>'+direction+'</dd></div><div><dt>מה ההשפעה?</dt><dd>'+influence+'</dd></div><div><dt>ינואר ויולי</dt><dd>'+(currentSeasonNotes[c.id]||'מוצג הכיוון הכללי בשני החודשים. בפועל המיקום והעוצמה משתנים; אין להסיק שהזרם קבוע במשך השנה.')+'</dd></div></dl><p class="current-source">מקורות: '+sources.map(key=>'<a href="'+currentSourceLinks[key][1]+'" target="_blank" rel="noopener">'+currentSourceLinks[key][0]+'</a>').join(' · ')+'</p></article>';
+ }
+ function drawAnnotations(){
+  const host=$('#currentMapLabels');host.innerHTML='';host.hidden=!settings.currents||!settings.currentLabels;if(host.hidden)return;
+  const {projection,view,cssW,cssH,canvas}=getMap(),bounds=canvas.getBoundingClientRect();
+  const blocked=Array.from(document.querySelectorAll('.latitude-label,.map-tools,.map-options,.map-note')).filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return{x:r.left-bounds.left-3,y:r.top-bounds.top-3,w:r.width+6,h:r.height+6};});
+  const overlaps=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  const priorities=['gulf','peru','benguela','kuroshio','california','atlantic','brazil','australia','somali','monsoon','canary','labrador','leeuwin','north-pacific'];
+  const list=visibleCurrents().sort((a,b)=>(a.id===settings.current?-100:priorities.includes(a.id)?priorities.indexOf(a.id):99)-(b.id===settings.current?-100:priorities.includes(b.id)?priorities.indexOf(b.id):99));
+  const font=cssW<500?10:12;host.style.fontSize=font+'px';let placed=0;
+  for(const c of list){
+   if(placed>=(cssW<500?5:14)&&getMap().view.s<.9&&c.id!==settings.current)continue;
+   const pts=currentPoints(c),anchor=pts[Math.floor((pts.length-1)/2)],p=projection(anchor),x=view.x+p[0]*view.s,y=view.y+p[1]*view.s;
+   if(x<0||x>cssW||y<0||y>cssH)continue;
+   const label=document.createElement('span');label.className='current-map-label'+(c.id===settings.current?' chosen':'');label.textContent=c.name;label.style.borderColor=currentColors[c.type];host.append(label);
+   const w=label.offsetWidth,h=label.offsetHeight,candidates=[[8,-h-5],[8,6],[-w-8,-h-5],[-w-8,6],[-w/2,-h-16],[-w/2,16]];
+   let position=null;for(const [dx,dy] of candidates){const b={x:x+dx,y:y+dy,w,h};if(b.x<4||b.x+w>cssW-4||b.y<47||b.y+h>cssH-31||blocked.some(r=>overlaps(b,r)))continue;position=b;break;}
+   if(!position){label.remove();continue;}
+   label.style.left=position.x+'px';label.style.top=position.y+'px';blocked.push(position);placed++;
+  }
+ }
+ $('#currentLabelsToggle').onclick=()=>{settings.currentLabels=!settings.currentLabels;refresh();};
+ $('#currentBasin').onchange=e=>{settings.currentBasin=e.target.value;settings.current='';refresh();};
+ $('#currentType').onchange=e=>{settings.currentType=e.target.value;settings.current='';refresh();};
+ $('#focusCurrent').onclick=()=>{const c=currents.find(c=>c.id===settings.current);if(c){const p=c.points[Math.floor(c.points.length/2)];focus(p[0],p[1],3);}};
+ $('#resetCurrent').onclick=()=>{settings.current='';refresh();};
  $('#currentSelect').innerHTML='<option value="">כל הזרמים</option>'+currents.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
  $('#currentSelect').onchange=e=>{settings.current=e.target.value;refresh();};
  $('#currentsToggle').onclick=()=>{settings.currents=!settings.currents;refresh();};
  document.querySelectorAll('[data-field]').forEach(b=>b.onclick=()=>{settings.field=settings.field===b.dataset.field?null:b.dataset.field;if(settings.field)loadData();refresh();});
  document.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{settings.month=Number(b.dataset.month);refresh();});
- return {render,drawField,drawCurrents,showTooltip,selectPoint,clearField(){settings.field=null;},settings};
+ return {render,drawField,drawCurrents,drawAnnotations,showTooltip,selectPoint,clearField(){settings.field=null;},settings};
 }

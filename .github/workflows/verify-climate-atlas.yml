@@ -59,7 +59,7 @@ jobs:
                 console.log('HTTP_STATUS=' + response.status);
                 console.log('HTML_SHA256=' + actualHash);
                 console.log('REQUIRED_CONTENT_CHECKS=passed');
-                for (const asset of ['layers.js','layers.css','data/climatology.json']) {
+                for (const asset of ['layers.js','layers.css','currents.js','data/era5/manifest.json','data/era5/temperature-01.bin.gz','data/era5/temperature-07.bin.gz','data/era5/precipitation-01.bin.gz','data/era5/precipitation-07.bin.gz']) {
                   const assetResponse = await fetch(url + asset + '?verify=' + process.env.GITHUB_SHA, {signal: AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
                   assert.equal(assetResponse.status, 200, asset + ' HTTP status');
                   const actual = Buffer.from(await assetResponse.arrayBuffer());
@@ -69,11 +69,13 @@ jobs:
                 assert.ok(html.includes('נוצר על ידי נדב שמגר באמצעות בינה מלאכותית'));
                 assert.ok(html.includes('latitudeLabels'));
                 assert.ok(html.includes('currentsToggle'));
-                const climate = JSON.parse(readFileSync('atlas/data/climatology.json'));
+                const climate = JSON.parse(readFileSync('atlas/data/era5/manifest.json'));
                 assert.equal(climate.period, '1991–2020');
                 for (const key of ['temperature','precipitation']) {
                   const layer = climate.layers[key];
-                  for (const month of [1,7]) assert.equal(layer.values[month].length, layer.latitudes.length * layer.longitudes.length);
+                  assert.equal(layer.longitudes.length, 1440);
+                  assert.equal(layer.latitudes.length, 721);
+                  for (const month of [1,7]) assert.ok(layer.frames[month].sha256);
                 }
                 verified = true;
                 break;
