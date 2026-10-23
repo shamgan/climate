@@ -82,7 +82,7 @@
   readoutButton.hidden=!(s.field||s.current||state.selected||state.tab!=='explore');
   const compact=q('#compactLegend');
   if(s.field){
-   const legend=q('#fieldLegend');compact.innerHTML='<div class="compact-field">'+legend.querySelector('.field-gradient').outerHTML+legend.querySelector('.field-ticks').outerHTML+'</div>';
+   const legend=q('#fieldLegend');compact.innerHTML='<div class="compact-field"><div class="scale-caption">'+(s.field==='temperature'?'מעלות צלזיוס <bdi>°C</bdi>':'מ״מ לחודש')+' · ממוצע <bdi>1991–2020</bdi></div>'+legend.querySelector('.field-gradient').outerHTML+legend.querySelector('.field-ticks').outerHTML+'</div>';
    compact.setAttribute('aria-label',legend.querySelector('h3').textContent);
   }else{
    compact.innerHTML='<div class="compact-climate">'+activeItems().map(r=>'<button data-key-region="'+r.id+'" title="'+r.name+'" aria-label="'+r.name+'" aria-pressed="'+highlighted().includes(r.id)+'">'+swatch(r)+'<span>'+r.short+'</span></button>').join('')+'</div>';
@@ -124,6 +124,7 @@
  q('#map').addEventListener('pointerdown',()=>{lastSelection=state.selected;lastCurrent=climateLayers.settings.current;lastPoint=climateLayers.settings.point;});
  q('#map').addEventListener('pointerup',()=>{const s=climateLayers.settings;if(s.current&&s.current!==lastCurrent)showInfo('current');else if(state.selected!==lastSelection||s.point!==lastPoint)showInfo('data');});
  q('#project').addEventListener('click',()=>{if(document.body.classList.contains('projection')&&drawer.open)closeDrawer();});
+ q('#focusCurrent').addEventListener('click',()=>{if(narrow.matches)closeDrawer();});
  let wasNarrow=narrow.matches;
  narrow.addEventListener('change',()=>{if(narrow.matches===wasNarrow)return;wasNarrow=narrow.matches;const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});
  document.addEventListener('atlas:render',sync);
