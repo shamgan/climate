@@ -126,7 +126,8 @@
  q('#project').addEventListener('click',()=>{if(document.body.classList.contains('projection')&&drawer.open)closeDrawer();});
  q('#focusCurrent').addEventListener('click',()=>{if(narrow.matches)closeDrawer();});
  let wasNarrow=narrow.matches;
- narrow.addEventListener('change',()=>{if(narrow.matches===wasNarrow)return;wasNarrow=narrow.matches;const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});
+ // Headless capture can briefly set a 1px viewport; this is not a real layout change.
+ narrow.addEventListener('change',()=>{if(innerWidth<240||narrow.matches===wasNarrow)return;wasNarrow=narrow.matches;const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});
  document.addEventListener('atlas:render',sync);
  document.body.classList.add('atlas-ui');sync();
  if(!narrow.matches){drawer.show();syncOpen();document.activeElement?.blur();}

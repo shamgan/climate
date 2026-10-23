@@ -1,4 +1,4 @@
-import functools, http.server, json, pathlib, threading, gzip, struct
+import functools, http.server, json, pathlib, threading, gzip, struct, os
 from playwright.sync_api import sync_playwright
 
 root=pathlib.Path(__file__).parent.parent
@@ -8,7 +8,7 @@ server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(QuietHa
 threading.Thread(target=server.serve_forever,daemon=True).start()
 url=f'http://127.0.0.1:{server.server_port}/'
 with sync_playwright() as p:
-    browser=p.chromium.launch(headless=True)
+    browser=p.chromium.launch(headless=True,executable_path=os.environ.get('ATLAS_CHROMIUM_PATH'))
     page=browser.new_page(viewport={'width':1440,'height':1000},device_scale_factor=1)
     errors=[]
     page.on('pageerror',lambda e:(errors.append(str(e)),print('PAGE_ERROR='+str(e),flush=True)))
