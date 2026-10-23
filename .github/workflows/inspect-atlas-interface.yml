@@ -1,0 +1,26 @@
+name: Inspect rendered atlas interface
+on:
+  push:
+    branches: [atlas-ui-render-review]
+    paths: ['.github/workflows/inspect-atlas-interface.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  previews:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: atlas-browser-previews
+          run-id: 39975694966
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: atlas/ui-review
+      - name: Save review images in this isolated review branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atlas/ui-review/*.png
+          git commit -m "Save actual browser previews for interface review"
+          git push origin HEAD:atlas-ui-render-review
