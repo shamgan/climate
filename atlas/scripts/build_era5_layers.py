@@ -21,7 +21,7 @@ def discover(variable):
     if not keys:
         with urllib.request.urlopen(BASE+'?list-type=2&delimiter=%2F',timeout=90) as response:top=ET.fromstring(response.read())
         print('CATALOG_ROOT',[n.text for n in top.findall('s:CommonPrefixes/s:Prefix',NS)],flush=True)
-    selected=[k for k in keys if '1991-2020' in k and 'monthly' in k and 'climatology' in k and k.endswith('.nc')]
+    selected=[k for k in keys if k.endswith('_climatology_mean_1991-2020.nc') and k.split('/')[-1].startswith(f'climatology-{variable}-monthly-')]
     print('CANDIDATES',variable,json.dumps(selected),flush=True)
     assert len(selected)==1, f'Expected exactly one monthly climatology, got {selected}'
     return selected[0]
