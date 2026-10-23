@@ -33,8 +33,11 @@ for name,variable in [('temperature','tas'),('precipitation','pr')]:
     urllib.request.urlretrieve(url,source)
     with xr.open_dataset(source,decode_times=False) as ds:
         print('DATASET_METADATA',json.dumps({'variables':{k:{'dims':list(v.dims),'shape':list(v.shape),'attrs':{a:str(b) for a,b in v.attrs.items()}} for k,v in ds.data_vars.items()},'coords':{k:{'shape':list(v.shape),'first':str(v.values.flat[0]),'last':str(v.values.flat[-1]),'attrs':{a:str(b) for a,b in v.attrs.items()}} for k,v in ds.coords.items()},'attrs':{k:str(v) for k,v in ds.attrs.items()}},ensure_ascii=True),flush=True)
-        assert variable in ds.data_vars
-        a=ds[variable].squeeze(drop=True)
+        assert ds.attrs.get('wb_period_label')=='1991-2020'
+        candidates=[k for k,v in ds.data_vars.items() if k.startswith(f'climatology-{variable}-monthly-') and v.ndim==3]
+        assert len(candidates)==1,candidates
+        assert np.array_equal(xr.decode_cf(ds).time.dt.month.values,np.arange(1,13)), 'Month order must be January to December'
+        a=ds[candidates[0]].squeeze(drop=True)
         latdim=next(d for d in a.dims if d.lower() in ('lat','latitude'))
         londim=next(d for d in a.dims if d.lower() in ('lon','longitude'))
         timedim=next(d for d in a.dims if d not in (latdim,londim))
