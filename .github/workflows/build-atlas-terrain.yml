@@ -1,0 +1,29 @@
+name: Build atlas terrain
+on:
+  push:
+    branches: [atlas-terrain-data]
+    paths:
+      - atlas/scripts/build_terrain.py
+      - .github/workflows/build-atlas-terrain.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  terrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy scipy
+      - name: Fetch and validate source elevation data
+        run: python -u atlas/scripts/build_terrain.py
+      - name: Commit terrain data to the isolated data branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atlas/data/terrain
+          git diff --cached --quiet || git commit -m "Add validated NOAA ETOPO1 terrain grid"
+          git push origin HEAD:atlas-terrain-data
