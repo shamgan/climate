@@ -1,0 +1,71 @@
+name: Verify published climate atlas
+
+on:
+  push:
+    paths:
+      - 'atlas/index.html'
+      - '.github/workflows/verify-climate-atlas.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-atlas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify public HTML against the committed atlas
+        env:
+          ATLAS_URL: https://shamgan.github.io/climate/atlas/
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { setTimeout } from 'node:timers/promises';
+          import assert from 'node:assert/strict';
+
+          const expected = readFileSync('atlas/index.html');
+          const sha256 = data => createHash('sha256').update(data).digest('hex');
+          const expectedHash = sha256(expected);
+          const url = process.env.ATLAS_URL;
+          let verified = false;
+          let lastResult = '';
+          for (let attempt = 1; attempt <= 24; attempt++) {
+            try {
+              const response = await fetch(url + '?verify=' + process.env.GITHUB_SHA + '&attempt=' + attempt, {
+                signal: AbortSignal.timeout(15000),
+                headers: { 'Cache-Control': 'no-cache' }
+              });
+              const bytes = Buffer.from(await response.arrayBuffer());
+              const actualHash = sha256(bytes);
+              lastResult = 'HTTP ' + response.status + ', SHA256 ' + actualHash;
+              if (response.ok && (response.headers.get('content-type') || '').includes('text/html') && actualHash === expectedHash) {
+                const html = bytes.toString('utf8');
+                for (const text of [
+                  'כל האזורים יחד',
+                  'אזורי אקלים עיקריים',
+                  'משווני / טרופי משווני',
+                  'כמות משקעים שנתית מתחת ל 200 מ"מ ויובש רב',
+                  'עונה יבשה בחורף וגשמים רבים בחודשי הקיץ (עונה רטובה)',
+                  'קוטבי ותת קוטבי',
+                  'תת קוטבי / סובפולרי'
+                ]) assert.ok(html.includes(text), 'Missing required content: ' + text);
+                assert.ok(!html.includes('map-original.jpg'));
+                assert.ok(!html.includes('map-index.png'));
+                console.log('VERIFIED_PUBLIC_URL=' + url);
+                console.log('HTTP_STATUS=' + response.status);
+                console.log('HTML_SHA256=' + actualHash);
+                console.log('REQUIRED_CONTENT_CHECKS=passed');
+                verified = true;
+                break;
+              }
+            } catch (error) {
+              lastResult = error.message;
+            }
+            console.log('Attempt ' + attempt + ': ' + lastResult);
+            if (attempt < 24) await setTimeout(10000);
+          }
+          assert.ok(verified, 'Published atlas did not match committed content: ' + lastResult);
+          JS
