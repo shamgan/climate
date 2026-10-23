@@ -28,6 +28,7 @@
   if(a>=75)return 'polarHigh';
   if(a>=55&&a<=67)return 'subpolarLow';
   if(a>=25&&a<=36)return 'subtropicalHigh';
+  if(a<30&&wind(lon,lat,month).kind==='crossEquatorial')return 'crossEquatorial';
   return a<30?'trade':a<60?'westerlies':'polar';
  }
  const api=Object.freeze({anchors,itcz,wind,zone});

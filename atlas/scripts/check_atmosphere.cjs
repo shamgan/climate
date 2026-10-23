@@ -19,6 +19,8 @@ for(const month of [1,7]){
 assert.ok(A.itcz(25,7)>A.itcz(25,1));
 assert.equal(A.wind(25,10,7).east,1); // northward cross-equatorial summer flow turns east in NH
 assert.equal(A.wind(25,-5,1).east,1); // southward cross-equatorial flow turns east in SH
+assert.equal(A.zone(80,10,7),'crossEquatorial');
+assert.equal(A.zone(25,-5,1),'crossEquatorial');
 assert.throws(()=>A.wind(0,95,1),RangeError);
 assert.throws(()=>A.itcz(0,2),RangeError);
 console.log('ATMOSPHERE_CHECKS_PASSED: conceptual wind directions in both hemispheres, seasonal convergence, periodic longitude, pressure zones, inputs');
