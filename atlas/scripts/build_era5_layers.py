@@ -11,7 +11,7 @@ NS={'s':'http://s3.amazonaws.com/doc/2006-03-01/'}
 def discover(variable):
     keys=[];token=None
     while True:
-        query={'list-type':'2','prefix':f'era5-x0.25/{variable}/','max-keys':'1000'}
+        query={'list-type':'2','prefix':f'data/era5-x0.25/{variable}/','max-keys':'1000'}
         if token:query['continuation-token']=token
         with urllib.request.urlopen(BASE+'?'+urllib.parse.urlencode(query),timeout=90) as response:root=ET.fromstring(response.read())
         keys.extend(n.text for n in root.findall('s:Contents/s:Key',NS))
