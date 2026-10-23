@@ -112,6 +112,24 @@ with sync_playwright() as p:
     assert retry.locator('#layerStatus').is_visible()
     retry.unroute('**/data/era5/manifest.json*');retry.locator('#retryLayer').click()
     retry.wait_for_function('document.querySelector("#layerStatus").hidden')
+    # The map must fill its frame even when max-height limits its aspect ratio.
+    click('.header-menu summary');click('#fontSize')
+    for width,height in [(1280,720),(1280,800),(1440,900),(1920,1080),(1024,768),(800,1280),(390,844)]:
+        page.set_viewport_size({'width':width,'height':height})
+        page.wait_for_timeout(80)
+        if width>900: dock('layers')
+        for closed in ([False,True] if width>900 else [True]):
+            if closed and page.locator('#mapDrawer').is_visible(): click('#closeDrawer')
+            frame=page.locator('.map-section').bounding_box()
+            stage=page.locator('#mapStage').bounding_box()
+            canvas=page.locator('#map').bounding_box()
+            assert abs(stage['x']-frame['x']-1)<=1,(width,height,closed,'left strip',stage,frame)
+            assert abs(stage['width']-frame['width']+2)<=1,(width,height,closed,'unused width',stage,frame)
+            assert abs(canvas['width']-stage['width'])<=1
+            assert page.locator('.latitude-label').count()==10
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            if width==1280 and height==720 and closed: shot('width-fixed-desktop')
+    print('WIDTH_CHECKS_PASSED: 7 screen sizes, drawer open/closed, full frame width, symmetric borders, all latitude labels, no horizontal overflow')
     assert not errors,errors
     print('BROWSER_CHECKS_PASSED: map-first desktop/mobile layout; no controls over canvas; drawer, keyboard tabs, Escape, modal focus; climate legends, comparison, inquiry; actual ERA5 values; 29 currents; months, zoom, labels, font size, sources, retry; no runtime errors')
     browser.close()

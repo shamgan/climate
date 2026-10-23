@@ -24,7 +24,7 @@
 .temperature-symbol{direction:ltr}
 .scale-caption{font-size:.72rem;color:#496762;margin-bottom:5px}
 .atlas-ui.large .compact-climate button{font-size:.88rem}
-.atlas-ui .map-stage,.atlas-ui.projection .map-stage{height:auto;aspect-ratio:1.8;min-height:320px;max-height:calc(100dvh - 250px)}
+.atlas-ui .map-stage,.atlas-ui.projection .map-stage{width:100%;height:auto;aspect-ratio:1.8;min-height:320px;max-height:calc(100dvh - 250px)}
 .atlas-ui .map-stage canvas{position:absolute;inset:0}
 .atlas-ui.projection .map-stage{max-height:calc(100dvh - 220px)}
 @media(max-width:900px){.atlas-ui .map-stage,.atlas-ui.projection .map-stage{height:auto;aspect-ratio:1.4;min-height:265px;max-height:none}}
