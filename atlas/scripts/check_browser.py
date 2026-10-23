@@ -20,12 +20,23 @@ with sync_playwright() as p:
     assert page.locator('#currentLegend').is_visible()
     assert page.locator('#currentSelect option').count()==30
     assert page.locator('.current-map-label').count()>=3
+    page.locator('#currentLabelsToggle').click()
+    assert not page.locator('#currentMapLabels').is_visible()
+    page.locator('#currentLabelsToggle').click()
+    assert page.locator('.current-map-label').count()>=3
     page.locator('#currentSelect').select_option('gulf')
     assert page.locator('.current-card dd').count()==4
     assert page.locator('.current-source a').count()>=1
     page.locator('#currentBasin').select_option('indian')
+    page.locator('#currentType').select_option('cold')
+    assert page.locator('#currentSelect option').count()==2
+    assert 'מערב אוסטרליה' in page.locator('#currentSelect').inner_text()
+    page.locator('#currentType').select_option('all')
     page.locator('#currentSelect').select_option('leeuwin')
     assert 'דרומה' in page.locator('#currentDetails').inner_text()
+    page.locator('#resetCurrent').click()
+    assert page.locator('.current-card').count()==0
+    page.locator('#currentSelect').select_option('leeuwin')
     page.locator('#focusCurrent').click()
     assert page.evaluate('state.zoom')==3
     page.locator('#resetView').click()
