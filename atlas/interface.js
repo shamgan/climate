@@ -57,7 +57,7 @@
  function showTab(name,focus=false){
   dock=name;
   drawer.querySelectorAll('[data-dock]').forEach(b=>{const on=b.dataset.dock===name;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;if(on&&focus)b.focus();});
-  ['layers','legend','info'].forEach(n=>q('#dock'+n[0].toUpperCase()+n.slice(1)).hidden=n!==name);
+  drawer.querySelectorAll('.dock-pane').forEach(p=>p.hidden=p.id!=='dock'+name[0].toUpperCase()+name.slice(1));
   q('.drawer-scroll').scrollTop=0;
  }
  function syncOpen(){workspace.classList.toggle('drawer-open',drawer.open&&!narrow.matches);open.setAttribute('aria-expanded',drawer.open);if(ready)requestAnimationFrame(draw);}
@@ -100,8 +100,8 @@
  q('#climateBase').onclick=()=>{climateLayers.clearField();render();};
  drawer.querySelectorAll('[data-dock]').forEach(b=>b.onclick=()=>showTab(b.dataset.dock));
  drawer.querySelector('.drawer-tabs').onkeydown=e=>{
-  const tabs=[...drawer.querySelectorAll('[data-dock]')],i=tabs.indexOf(document.activeElement);if(i<0)return;
-  let next;if(e.key==='ArrowLeft')next=(i+1)%3;else if(e.key==='ArrowRight')next=(i+2)%3;else if(e.key==='Home')next=0;else if(e.key==='End')next=2;else return;
+  const tabs=[...drawer.querySelectorAll('[data-dock]')].filter(b=>!b.hidden),i=tabs.indexOf(document.activeElement);if(i<0)return;
+  let next;if(e.key==='ArrowLeft')next=(i+1)%tabs.length;else if(e.key==='ArrowRight')next=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;
   e.preventDefault();showTab(tabs[next].dataset.dock,true);
  };
  drawer.addEventListener('close',syncOpen);
@@ -133,3 +133,4 @@
  if(!narrow.matches){drawer.show();syncOpen();document.activeElement?.blur();}
  window.atlasInterface={open:openDrawer,close:closeDrawer,showInfo};
 })();
+

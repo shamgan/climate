@@ -1,0 +1,45 @@
+/* Additive teaching overlays. Existing base layer styles and color scales stay intact. */
+.learning-controls{padding-bottom:18px;margin-bottom:17px;border-bottom:1px solid #e5ede6}
+.learning-controls h3{font-size:.88rem;margin:0 0 11px}
+.learning-switch{width:100%;display:flex;align-items:center;gap:10px;text-align:right;min-height:58px;margin-top:7px;padding:9px 10px;background:white}
+.learning-switch .learning-icon{font-size:1.2rem;display:grid;place-items:center;width:31px;height:31px;flex:none;border-radius:8px;background:#f0f1e9;color:#5a6147}
+.learning-switch .learning-name{flex:1;font-weight:700;font-size:.87rem;line-height:1.4}
+.learning-switch small{display:block;font-weight:400;color:#5c726b;font-size:.69rem;margin-top:2px}
+.learning-switch .learning-check{width:18px;height:18px;display:grid;place-items:center;border:1px solid #9aafa1;border-radius:4px;flex:none;color:transparent;font-size:13px}
+.learning-switch[aria-pressed=true]{background:#edf4ee!important;color:#163e34!important;border-color:#5a8067!important}
+.learning-switch[aria-pressed=true] .learning-check{background:#326c51;color:white;border-color:#326c51}
+.learning-open{margin-top:9px;width:100%;font-size:.78rem;background:#f9faf6;min-height:40px}
+.learning-controls .control-hint{font-size:.71rem}
+.learning-status{font-size:.77rem;margin:8px 0;padding:8px 10px;background:#fbf5db;border-radius:7px}
+.learning-status button{font-size:.75rem;min-height:36px;padding:4px 8px}
+.learning-key{display:flex;gap:7px 16px;align-items:center;flex-wrap:wrap;padding:8px 14px;border-top:1px solid #e7ede8;font-size:.7rem;background:#fbfcf9}
+.learning-key[hidden]{display:none}.learning-key>span{display:flex;gap:5px;align-items:center}.learning-key b{font-size:.8rem}.learning-key .learning-key-link{margin-inline-start:auto;border:0;background:transparent;padding:3px;font-size:.73rem;text-decoration:underline;min-height:30px}
+.learning-inspect{min-height:38px;font-size:.73rem;padding:6px 9px;background:#f3f5e9;color:#486139;border-color:#cbd8b8}
+.learning-pane h3{font-size:1.1rem;line-height:1.35;margin:17px 0 8px}
+.learning-pane p{font-size:.84rem;line-height:1.7;margin:9px 0}
+.learning-pane .learning-caveat{font-size:.73rem;color:#5d7067;background:#f3f5ed;border-radius:7px;padding:9px 10px;line-height:1.55}
+.learning-topic-select,.learning-place-select,.learning-ridge-select{width:100%;font-size:.82rem;min-height:42px}
+.learning-pane label{display:block;font-size:.78rem;font-weight:700;margin:12px 0 5px}
+.learning-pane .learning-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.learning-metric{padding:10px 8px;background:#eff4ed;border:1px solid #dce5d7;border-radius:9px;text-align:center}
+.learning-metric strong{display:block;font-size:1.35rem;color:#295247;direction:ltr;line-height:1.3}
+.learning-metric span{display:block;font-size:.7rem;margin-top:5px}
+.learning-pane .learning-location{font-size:.8rem;color:#3e6258;margin:8px 0}
+.learning-actions{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.learning-actions button{font-size:.73rem;padding:6px 8px;flex:1;min-height:39px}
+.learning-months{display:flex;gap:5px;margin:10px 0}.learning-months button{flex:1;font-size:.85rem;min-height:38px}
+.learning-scene{width:100%;height:auto;aspect-ratio:1.6;display:block;border:1px solid #cddbd8;border-radius:10px;background:#e9f0ed;margin:12px 0}
+.learning-pane .learning-step{min-height:66px;padding:9px 11px;background:#edf4ee;border-radius:8px;font-size:.8rem}
+.learning-pane .learning-legend{font-size:.76rem;line-height:1.75;padding:10px;background:#f7f5ed;border-radius:8px}
+.learning-pane .learning-legend bdi{font-weight:700}
+.learning-pane .learning-inquiry{padding:11px;border-inline-start:3px solid #ba8c40;background:#faf6eb;font-size:.81rem;margin:14px 0}
+.learning-pane details{border-top:1px solid #dce5dd;margin-top:16px;padding-top:10px}
+.learning-pane summary{font-size:.8rem;cursor:pointer;min-height:40px;padding:6px 0}
+.learning-pane .learning-sources{font-size:.73rem;line-height:1.75;padding:0 18px 0 0}.learning-sources a{color:#286353;overflow-wrap:anywhere}
+.learning-pane .learning-mini-table{border-collapse:collapse;width:100%;font-size:.76rem;margin:12px 0}.learning-mini-table td,.learning-mini-table th{padding:7px 5px;border-bottom:1px solid #dce5dd;text-align:center}.learning-mini-table th:first-child{text-align:right}
+.learning-opacity{width:100%;accent-color:#486750;direction:ltr}
+.learning-pane .learning-moisture{display:flex;align-items:center;gap:8px;font-weight:400}.learning-moisture input{width:18px;height:18px;accent-color:#386a52}
+.learning-pane .learning-wind-key{display:flex;gap:6px;flex-wrap:wrap}.learning-wind-key button{font-size:.71rem;padding:5px 7px;min-height:37px}
+.atlas-ui .drawer-tabs:has(#tabLearning:not([hidden])){gap:2px;padding-inline:8px}.atlas-ui .drawer-tabs:has(#tabLearning:not([hidden])) button{font-size:.76rem;padding-inline:2px}
+.atlas-ui.large .learning-pane p{font-size:.97rem}.atlas-ui.large .learning-metric strong{font-size:1.5rem}
+@media(max-width:900px){.learning-key{font-size:.66rem;gap:5px 11px;padding:7px 10px}.learning-key .learning-key-link{flex-basis:100%;text-align:right}.learning-pane p{font-size:.92rem}.learning-pane .learning-caveat{font-size:.77rem}.learning-pane .learning-step{font-size:.88rem}.learning-scene{aspect-ratio:1.7}.learning-inspect{font-size:.7rem}}
+@media print{.learning-inspect{display:none!important}.learning-key{break-inside:avoid}}

@@ -25,10 +25,17 @@ jobs:
           fi
       - name: Check monthly layers and responsive interactions
         run: python -u atlas/scripts/check_interface.py
+      - name: Check new solar and circulation models
+        run: |
+          node atlas/scripts/check_solar.cjs
+          node atlas/scripts/check_atmosphere.cjs
+      - name: Check additive teaching layers and preserve existing layers
+        run: python -u atlas/scripts/check_learning.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: atlas-browser-previews
           path: atlas/*.png
           if-no-files-found: ignore
+
 
