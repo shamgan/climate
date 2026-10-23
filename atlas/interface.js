@@ -106,6 +106,13 @@
  };
  drawer.addEventListener('close',syncOpen);
  drawer.addEventListener('cancel',e=>{e.preventDefault();closeDrawer();});
+ drawer.addEventListener('keydown',e=>{
+  if(e.key!=='Tab'||!narrow.matches)return;
+  const stops=[...drawer.querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex]')].filter(el=>el.tabIndex>=0&&!el.disabled&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
+  const first=stops[0],last=stops.at(-1);if(!first)return;
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+ });
  drawer.addEventListener('click',e=>{if(e.target===drawer&&narrow.matches){const r=drawer.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDrawer();}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer.open&&!narrow.matches&&!q('#sourceDialog').open){e.preventDefault();closeDrawer();}});
  document.addEventListener('click',e=>{
@@ -117,7 +124,8 @@
  q('#map').addEventListener('pointerdown',()=>{lastSelection=state.selected;lastCurrent=climateLayers.settings.current;lastPoint=climateLayers.settings.point;});
  q('#map').addEventListener('pointerup',()=>{const s=climateLayers.settings;if(s.current&&s.current!==lastCurrent)showInfo('current');else if(state.selected!==lastSelection||s.point!==lastPoint)showInfo('data');});
  q('#project').addEventListener('click',()=>{if(document.body.classList.contains('projection')&&drawer.open)closeDrawer();});
- narrow.addEventListener('change',()=>{const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});
+ let wasNarrow=narrow.matches;
+ narrow.addEventListener('change',()=>{if(narrow.matches===wasNarrow)return;wasNarrow=narrow.matches;const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});
  document.addEventListener('atlas:render',sync);
  document.body.classList.add('atlas-ui');sync();
  if(!narrow.matches){drawer.show();syncOpen();document.activeElement?.blur();}
