@@ -17,7 +17,11 @@ def discover(variable):
         keys.extend(n.text for n in root.findall('s:Contents/s:Key',NS))
         token=root.findtext('s:NextContinuationToken',default=None,namespaces=NS)
         if not token:break
-    selected=[k for k in keys if k.endswith('1991-2020.nc') and f'climatology-{variable}-monthly-mean_' in k and '_climatology_mean_' in k]
+    print('CATALOG_SAMPLE',variable,len(keys),json.dumps(keys[:35]),flush=True)
+    if not keys:
+        with urllib.request.urlopen(BASE+'?list-type=2&delimiter=%2F',timeout=90) as response:top=ET.fromstring(response.read())
+        print('CATALOG_ROOT',[n.text for n in top.findall('s:CommonPrefixes/s:Prefix',NS)],flush=True)
+    selected=[k for k in keys if '1991-2020' in k and 'monthly' in k and 'climatology' in k and k.endswith('.nc')]
     print('CANDIDATES',variable,json.dumps(selected),flush=True)
     assert len(selected)==1, f'Expected exactly one monthly climatology, got {selected}'
     return selected[0]
