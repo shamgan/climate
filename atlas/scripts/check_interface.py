@@ -143,7 +143,7 @@ with sync_playwright() as p:
     retry.unroute('**/data/era5/manifest.json*');retry.locator('#retryLayer').click()
     retry.wait_for_function('document.querySelector("#layerStatus").hidden')
     # The map must fill its frame even when max-height limits its aspect ratio.
-    click('.header-menu summary');click('#fontSize')
+    dock('layers');click('#fontSize')
     for width,height in [(1280,720),(1280,800),(1440,900),(1920,1080),(1024,768),(800,1280),(390,844)]:
         page.set_viewport_size({'width':width,'height':height})
         page.wait_for_timeout(80)
