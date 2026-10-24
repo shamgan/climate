@@ -59,7 +59,11 @@ jobs:
                 console.log('HTTP_STATUS=' + response.status);
                 console.log('HTML_SHA256=' + actualHash);
                 console.log('REQUIRED_CONTENT_CHECKS=passed');
-                for (const asset of ['cities.js','cities.css','data/cities/climatology.json','navigation.js','navigation.css','data/boundaries/countries.json','learning-layers.js','learning-layers.css','solar-model.js','atmosphere-model.js','data/terrain/manifest.json','data/terrain/elevation-01deg.bin.gz','interface.js','interface.css','layers.js','layers.css','currents.js','data/era5/manifest.json','data/era5/temperature-01.bin.gz','data/era5/temperature-07.bin.gz','data/era5/precipitation-01.bin.gz','data/era5/precipitation-07.bin.gz']) {
+                const climate = JSON.parse(readFileSync('atlas/data/era5/manifest.json'));
+                assert.deepEqual(climate.months, Array.from({length:12},(_,i)=>i+1));
+                const monthly = Object.values(climate.layers).flatMap(layer=>Object.values(layer.frames).map(frame=>frame.url));
+                const assets = ['cities.js','cities.css','data/cities/climatology.json','navigation.js','navigation.css','data/boundaries/countries.json','places.js','data/places/countries.json','learning-layers.js','learning-layers.css','solar-model.js','atmosphere-model.js','data/terrain/manifest.json','data/terrain/elevation-01deg.bin.gz','interface.js','interface.css','layers.js','layers.css','currents.js','data/era5/manifest.json',...monthly];
+                for (const asset of assets) {
                   const assetResponse = await fetch(url + asset + '?verify=' + process.env.GITHUB_SHA, {signal: AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
                   assert.equal(assetResponse.status, 200, asset + ' HTTP status');
                   const actual = Buffer.from(await assetResponse.arrayBuffer());
@@ -69,13 +73,12 @@ jobs:
                 assert.ok(html.includes('נוצר על ידי נדב שמגר באמצעות בינה מלאכותית'));
                 assert.ok(html.includes('latitudeLabels'));
                 assert.ok(html.includes('currentsToggle'));
-                const climate = JSON.parse(readFileSync('atlas/data/era5/manifest.json'));
                 assert.equal(climate.period, '1991–2020');
                 for (const key of ['temperature','precipitation']) {
                   const layer = climate.layers[key];
                   assert.equal(layer.longitudes.length, 1440);
                   assert.equal(layer.latitudes.length, 721);
-                  for (const month of [1,7]) assert.ok(layer.frames[month].sha256);
+                  for (const month of climate.months) assert.ok(layer.frames[month].sha256);
                 }
                 verified = true;
                 break;

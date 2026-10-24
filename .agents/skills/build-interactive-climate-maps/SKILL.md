@@ -29,17 +29,17 @@ Use openly licensed geometry and data with specific attribution. Treat an upload
 
 Keep a shared geographic projection, camera and state for every raster, line, marker, label and hit-test. Separate data selection from rendering and independent overlay visibility. Switching a base map or month must not silently disable overlays.
 
-Show what the data supports. Document units, period, native and displayed resolution, sampling and source/model status. Better image sharpness is not better geographic resolution. Never fabricate monthly city values, interpolate two months into twelve or present conceptual currents as observed monthly measurements.
+Show what the data supports. Document units, period, native and displayed resolution, sampling and source/model status. Better image sharpness is not better geographic resolution. Prefer source-backed monthly values. If the user authorizes estimates, label them visibly and document their method; never present interpolation or conceptual currents as observed monthly measurements. This atlas now has all 12 actual source months for temperature and precipitation; only intermediate conceptual ITCZ positions are estimated.
 
 Treat terminology changes as a documented pedagogical mapping. Keep source class identifiers and exact membership available. Preserve the distinction between a preferred label, an accepted scientific classification term and a physical property. Resolve scientifically misleading requests transparently instead of encoding them as universal truths.
 
 ## Design the interface around the map
 
-For this atlas, use a full-viewport map and a right-hand tools panel. Place the system title above the tools, sources/info and text enlargement in the panel footer, and keep control density off the map. Remove the obsolete top bar/options menu. Allow internal panel scrolling while the document remains fixed; retain zoom and pan. Preserve complete-world framing at reset rather than cropping geography to hide aspect-ratio whitespace.
+For this atlas, use a full-viewport map and a right-hand tools panel. Place the system title above the tools, sources/info and text enlargement in the panel footer, and keep control density off the map. Remove the obsolete top bar/options menu. Allow internal panel scrolling while the document remains fixed; retain zoom and pan. The latest review explicitly requests height-fit at startup/reset, superseding the earlier complete-world default. Keep a clearly labeled whole-world framing action and shared camera geometry; explain that height-fit can extend beyond the horizontal viewport.
 
-Use coherent tabs and groups, a clear all-zones view, separate main/detailed climates, and independent on/off switches for additions. Keep colors, labels, marker meaning and legends consistent. Make latitude lines prominent with names and numbers on both sides.
+Use coherent tabs and groups, a clear all-zones view, separate main/detailed climates, and independent on/off switches for additions. Keep colors, labels, marker meaning and legends consistent. Use one compact latitude label per line in a separate desktop gutter, with tropic aliases only in tooltips. Mobile defaults to lines without labels. Provide an independent visibility switch.
 
-Implement real text enlargement across DOM, canvas and SVG. A body class alone is insufficient. Recompute layout and redraw labels/charts; avoid double scaling. Check Hebrew punctuation, numeric direction, overlap and clipping on narrow and short screens.
+Keep a single 12-month timeline and play/pause control adjacent to the map legend, a stable disabled detail section on non-climate layers, and teaching additions in a collapsed accordion. Use a mobile bottom sheet, persistent selected-point pins, country/region names, hover values and high-contrast current lines with sparse default labels. Implement real text enlargement across DOM, canvas and SVG. A body class alone is insufficient. Recompute layout and redraw labels/charts; avoid double scaling. Check Hebrew punctuation, numeric direction, overlap and clipping on narrow and short screens.
 
 ## Verify and deliver
 

@@ -11,7 +11,10 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':1000});errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(f'http://127.0.0.1:{server.server_port}/');page.wait_for_function('ready && atlasCities.ready()')
-    def click(s):page.locator(s).click()
+    def click(s):
+        if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
+        page.locator(s).click()
+        if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def snapshot():return page.evaluate('JSON.stringify({state,climate:climateLayers.settings,learning:atlasLearning.settings})')
     def pixels():return page.locator('#map').evaluate('c=>c.toDataURL()')
     def active():
@@ -61,6 +64,7 @@ with sync_playwright() as p:
             assert page.locator('#cityMarker').is_visible()
         page.screenshot(path=str(root/('desert-'+field+'-currents.png')),full_page=True)
     click('#navWorld');active();assert page.evaluate('state.zoom')==1
+    page.locator('#learningAccordion summary').click()
     for overlay in ['atmosphere','solar','terrain']:click('#'+overlay+'Toggle');active()
     page.wait_for_function('atlasLearning.terrainReady()',timeout=60000)
     before=snapshot();image=pixels();click('#desertBelt');assert snapshot()==before
@@ -87,3 +91,4 @@ with sync_playwright() as p:
     print('DESERT_OVERLAY_PASSED: independent reversible switch; continuous BWh/BWk-only color fill with transparent non-desert cells; both ERA5 fields and months; currents, teaching overlays and city preserved; camera and selection persistence; full reset; matching switch appearance; keyboard and mobile',flush=True)
     browser.close()
 server.shutdown()
+

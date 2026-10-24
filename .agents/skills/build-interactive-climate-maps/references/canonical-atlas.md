@@ -22,7 +22,8 @@ This is a dated recovery aid, not a claim about the current repository head. Ref
 |---|---|
 | atlas/index.html | Base map, embedded climate source/rendering, climate class mapping, latitude labels, source dialog and shared state. Some old header markup is relocated/removed by interface.js at runtime; inspect rendered DOM. |
 | atlas/interface.js / interface.css | Dock, tabs, full-viewport layout, footer controls, typography and responsive interaction. |
-| atlas/layers.js / layers.css | Monthly temperature/precipitation fields and interactions. |
+| atlas/layers.js / layers.css | Twelve monthly temperature/precipitation fields, playback, hover and selection. |
+| atlas/places.js / data/places/countries.json | Lazy country/region polygon lookup for selected points; source retained in manifest. |
 | atlas/currents.js | 29 sourced conceptual current paths and descriptions, January/July behavior. |
 | atlas/navigation.js / navigation.css | Shared zoom/pan, full reset, country boundaries and persistent desert overlay. |
 | atlas/cities.js / cities.css | Selected-city marker, 12-month climographs, table and expanded dialog. |
@@ -34,7 +35,7 @@ This is a dated recovery aid, not a claim about the current repository head. Ref
 | atlas/data/boundaries/countries.json | Raw boundary/label dataset, retained unchanged by requested local display filter. |
 | atlas/scripts/ | Existing regression suites and carefully maintained preservation baselines. |
 | .github/workflows/test-atlas-layers.yml | Browser and model regression CI. |
-| .github/workflows/verify-climate-atlas.yml | Public HTML and 22 asset comparisons after main publication. |
+| .github/workflows/verify-climate-atlas.yml | Public HTML and 44 asset comparisons after main publication (including 24 monthly frames). |
 
 Use existing scripts check_interface.py, check_solar.cjs, check_atmosphere.cjs, check_learning.py, check_navigation.py, check_cities.py and check_desert.py as relevant. Run against real repository data; small local previews are not production-resolution proof.
 
@@ -58,9 +59,9 @@ Use existing scripts check_interface.py, check_solar.cjs, check_atmosphere.cjs, 
 - Collection: https://worldbank.github.io/climateknowledgeportal/docs/collections/era5-x0.25.html
 - Open-data registry: https://registry.opendata.aws/wbg-cckp/
 - Period 1991–2020; 0.25° grid. Grid-cell means are not city-station measurements or current weather.
-- Map has January/July; city file has all 12 source months. Temperature °C; precipitation mm per month. The city's precipitation source is already monthly millimeters, so do not multiply it by the number of days.
+- Map and city file both have all 12 source months; original Jan/Jul map frames and metadata are byte-identical. Temperature °C; precipitation mm per month. The city's precipitation source is already monthly millimeters, so do not multiply it by the number of days.
 - ERA5 display encoding: unsigned little-endian uint16 in gzip, no-data 65535, decoded value = encoded × scale + offset. Scale 0.1 is storage precision, not claimed measurement accuracy.
-- City extraction uses the nearest compatible cell and 0.1 quantization. The stored validation checks 80 matches against existing Jan/Jul map cells.
+- City extraction uses the nearest compatible cell and 0.1 quantization. The validation checks 480 matches against all 12 map months; the original 80 Jan/Jul comparisons remain a subset.
 - Cities: ירושלים, לונדון, קהיר, מומבאי, מנאוס, סידני, ניו יורק, קייפטאון, טרומסה (Tromsø), רייקיאוויק, סינגפור, בנגקוק, אולן בטור, יקוטסק, קיטו, ניירובי, בואנוס איירס, סנטיאגו, אליס ספרינגס, פיניקס.
 - Preserve actual city anchors separately from gridLon/gridLat. The city manifest documents Natural Earth populated-place coordinates and preserved prior anchors.
 
@@ -92,3 +93,9 @@ Use existing scripts check_interface.py, check_solar.cjs, check_atmosphere.cjs, 
 ## Skill storage scope
 
 This skill is versioned with the atlas under .agents/skills/build-interactive-climate-maps/. Its repository copy is a durable project skill; atlas/AGENTS.md routes atlas work to it. A repository save does not establish that the separate personal cloud Skills catalog was updated. If later given a writable personal Skills workspace, reconcile this skill there using the skill-creator workflow and verify its sync; do not silently overwrite the broader Earth-science visualization skill.
+
+## Source-backed twelve-month build, 2026-10-24
+
+The isolated build at commit c2fdc9c454d47bf1489cb73efa330524e5f4c638 passed workflow 40099189908: 24 genuine frames, four original frames and metadata unchanged, 480 matching city values. This is data-build evidence, not UI or publication verification. Temperature source SHA256: 450df4fded6bbbe63d7a73e1f6394058acdb91ce5cea1865752aba6bdc898996; precipitation: 804178402ccce6231e9815df6abbf0fabda223626d396f0cc570657b07b6f09f.
+
+Country lookup uses Natural Earth 1:50m admin-0 country polygons at revision ca96624a56bd078437bca8184e78163e5039ad19, source git blob 9d99f26dc470fcdbd08b062c813005acbdf73ccb. All 242 features, polygon holes and 99,613 vertices are retained; coordinates round to 0.0001 degrees and are delta-varint encoded. It is independent of the optional border-line layer. Country membership is source geometry, not a sovereignty determination. PS is displayed as the neutral region הלבנט under this project's existing label preference. Unmatched coastal/sea points use a latitude-region fallback.

@@ -5,11 +5,11 @@ from playwright.sync_api import sync_playwright
 root = pathlib.Path(__file__).parent.parent
 # Original data/field fingerprints; interface.css updated for the authorized viewport UI.
 preserved = {
-    'layers.js':'936b564d2111997c10495befbba1417796c53389',
-    'layers.css':'3fec97a96d72643bfe40a35f4bf7ed5689f012db',
+    'layers.js':'9a3994e38251f269f0996832c99dedc13f36fa33',
+    'layers.css':'9ec252b7882f274ef75d0cb0bc1ce5bd52690baf',
     'currents.js':'f1aa87d81cd8fa8a9f1361cde68af62cf95369ce',
-    'interface.css':'a8e42d513ce386ae9f0d1735c6d207735e6a927d',
-    'data/era5/manifest.json':'ec60e235304477f24a2386d379f94987300d2caa',
+    'interface.css':'c729b89a39fda8bb563eb78e93491848e19b1196',
+    'data/era5/manifest.json':'2d5abe3ff4cab612ee4949ca4183730ee448b31a',
     'data/era5/temperature-01.bin.gz':'7e1065e6a47953b9a6ac872e4e53abfb75015dc4',
     'data/era5/temperature-07.bin.gz':'404e668939526521ee0cd45b1ffcbfdbde6e93af',
     'data/era5/precipitation-01.bin.gz':'4e437d52ef2250d86ed7028de266264ae7ff060e',
@@ -18,7 +18,7 @@ preserved = {
 for path, expected in preserved.items():
     data=(root/path).read_bytes()
     assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==expected,path
-print('EXISTING_LAYER_ASSETS_UNCHANGED',flush=True)
+print('LAYER_ASSETS_VERIFIED: authorized UI/monthly manifest; original January/July data and current geometry unchanged',flush=True)
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args): pass
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(root)))
@@ -35,23 +35,28 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={'width':1440,'height':1000},device_scale_factor=1)
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(url);page.wait_for_function('ready && window.atlasLearning')
-    def click(s): page.locator(s).click()
+    def click(s):
+        page.locator(s).click()
+        if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def dock(name):
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')
         click('#tab'+name.capitalize())
     def shot(name):page.screenshot(path=str(root/(name+'.png')),full_page=True)
     def canvas_hash():return page.locator('#map').evaluate('(c)=>c.toDataURL()')
     def existing():return page.evaluate('({climate:{...climateLayers.settings},view:state.view,selected:state.selected,tab:state.tab})')
+    click('#navWorld')
     before=existing();base_image=canvas_hash()
     assert page.locator('#tabLearning').is_hidden()
     assert page.locator('#mapStage button').count()==0
+    assert not page.locator('#learningAccordion').evaluate('e=>e.open')
+    click('#learningAccordion summary')
     for layer in ['atmosphere','solar','terrain']:
         click('#'+layer+'Toggle')
         assert page.locator('#'+layer+'Toggle').get_attribute('aria-pressed')=='true'
         assert existing()==before, 'Overlay changed existing layer state'
     page.wait_for_function('atlasLearning.terrainReady()',timeout=60000)
     assert canvas_hash()!=base_image
-    assert page.locator('.latitude-label').count()==10
+    assert page.locator('.latitude-label').count()==5
     assert page.locator('#monthControl').is_visible()
     assert page.locator('#terrainStatus').is_hidden()
     assert page.evaluate('atlasLearning.terrainInfo().sha256')==manifest['file']['sha256']
@@ -66,14 +71,14 @@ with sync_playwright() as p:
     page.locator('#learningTopic').select_option('solar');page.locator('#learningPlace').select_option('0')
     assert page.locator('#solarDaylight').inner_text()=='10:08'
     assert page.locator('#solarAltitude').inner_text()=='36.9°'
-    jan=canvas_hash();click('[data-learning-month="7"]')
+    jan=canvas_hash();click('[data-month="7"]')
     assert page.evaluate('climateLayers.settings.month')==7
     assert page.locator('#solarDaylight').inner_text()=='13:54'
     assert page.locator('#solarAltitude').inner_text()=='79.9°'
     assert jan!=canvas_hash()
     page.locator('#learningPlace').select_option('5');assert page.locator('#solarDaylight').inner_text()=='24:00'
     shot('learning-solar-desktop')
-    click('[data-learning-month="1"]');assert page.locator('#solarDaylight').inner_text()=='0:00'
+    click('[data-month="1"]');assert page.locator('#solarDaylight').inner_text()=='0:00'
     assert float(page.locator('#solarAltitude').inner_text().replace('°',''))<0
     page.locator('#learningPlace').select_option('1');assert page.locator('#solarDaylight').inner_text()=='12:00'
     page.locator('#learningTopic').select_option('atmosphere')
@@ -82,7 +87,7 @@ with sync_playwright() as p:
     click('[data-pressure-point="0"]');assert 'התכנסות' in page.locator('#pressureTitle').inner_text()
     click('[data-pressure-point="60"]');assert 'נמוך' in page.locator('#pressureTitle').inner_text()
     page.locator('#learningTopic').select_option('terrain')
-    assert page.locator('#learningMonths').is_hidden()
+    assert not page.locator('#learningMonths').count()
     page.locator('#ridgeSelect').select_option('himalaya');click('#focusRidge')
     assert page.evaluate('state.zoom')==3
     elevation=page.locator('#terrainElevation').inner_text();assert elevation not in ['מחוץ ליבשה','טוען…']
@@ -100,7 +105,7 @@ with sync_playwright() as p:
     click('#orographicMoist');click('#orographicStep');click('#orographicStep');click('#orographicStep')
     assert 'יורד' in page.locator('#orographicStepText').inner_text()
     low=canvas_hash();page.locator('#terrainOpacity').fill('15');assert low!=canvas_hash()
-    page.locator('#terrainOpacity').fill('65');click('#ridgeWorld')
+    page.locator('#terrainOpacity').fill('65');click('#navWorld')
     # Explicit inspection consumes only the new-layer click, preserving base selection.
     before_pick=existing();click('#pickLearningPoint')
     assert page.evaluate('atlasLearning.settings.inspect')
@@ -142,7 +147,7 @@ with sync_playwright() as p:
     retry=browser.new_page();retry.on('pageerror',lambda e:errors.append(str(e)))
     retry.route('**/data/terrain/manifest.json*',lambda route:route.fulfill(status=503,body='unavailable'))
     retry.goto(url);retry.wait_for_function('ready && window.atlasLearning')
-    retry.locator('#terrainToggle').click();retry.locator('#retryTerrain').wait_for()
+    retry.locator('#learningAccordion summary').click();retry.locator('#terrainToggle').click();retry.locator('#retryTerrain').wait_for()
     assert retry.locator('#layerStatus').is_hidden()
     retry.unroute('**/data/terrain/manifest.json*');retry.locator('#retryTerrain').click()
     retry.wait_for_function('atlasLearning.terrainReady()',timeout=60000)

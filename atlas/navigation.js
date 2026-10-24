@@ -26,13 +26,18 @@
  const borderControls=document.createElement('div');borderControls.id='bordersControl';borderControls.className='navigation-overlay';
  borderControls.append(q('#bordersToggle'),q('#borderStatus'),q('#borderOptions'));
  q('#currentsControl').after(borderControls);
+ // A single visible camera-framing action lives beside the map controls.
+ q('.map-tools').append(q('#navWorld'));
+ const latitudeControl=document.createElement('div');latitudeControl.id='latitudeControl';latitudeControl.className='navigation-overlay';
+ latitudeControl.append(q('#latitudes'));borderControls.after(latitudeControl);
  let data=null,pending=null,error='',labelBoxes=[],desertRaster=null;
  const desertActive=()=>settings.desert;
  const desertKey=document.createElement('div');desertKey.id='desertMapKey';desertKey.className='desert-map-key';desertKey.hidden=true;
  desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>אזורי מדבר · מילוי ורוד בולט</span>';
  q('.map-key').after(desertKey);
  function sync(){
-  q('#navZoomIn').disabled=state.zoom>=6;q('#navZoomOut').disabled=state.zoom<=1;
+  q('#navZoomIn').disabled=state.zoom>=maxMapZoom();q('#navZoomOut').disabled=state.zoom<=1;
+  q('#navWorld').textContent=state.framing==='world'?'מילוי המסך':'כל העולם';q('#navWorld').setAttribute('aria-label',state.framing==='world'?'התאמת המפה לגובה המסך':'הצגת מפת העולם כולה');
   q('#navZoomValue').value=Math.round(state.zoom*100)+'%';
   q('#desertBelt').setAttribute('aria-pressed',desertActive());q('#desertBeltNote').hidden=!desertActive();desertKey.hidden=!desertActive();
   q('#bordersToggle').setAttribute('aria-pressed',settings.borders);
@@ -82,7 +87,7 @@
   Object.assign(atlasLearning.settings,{atmosphere:false,solar:false,terrain:false,inspect:false});
  }
  function fullReset(){
-  stopLearning();Object.assign(state,structuredClone(initial.map));Object.assign(climateLayers.settings,structuredClone(initial.climate));Object.assign(atlasLearning.settings,structuredClone(initial.learning));
+  climateLayers.pausePlayback?.();stopLearning();Object.assign(state,structuredClone(initial.map));Object.assign(climateLayers.settings,structuredClone(initial.climate));Object.assign(atlasLearning.settings,structuredClone(initial.learning));
   Object.assign(settings,{borders:false,names:true,desert:false});q('#countryNames').checked=true;
   q('#learningPlace').value='0';q('#terrainOpacity').value='65';q('#orographicMoist').checked=true;
   if(document.body.classList.contains('large'))q('#fontSize').click();if(document.body.classList.contains('projection'))q('#project').click();
@@ -111,11 +116,11 @@
   ctx.save();const fontSize=12*atlasTextScale();
   ctx.font='600 '+fontSize/view.s+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';ctx.lineJoin='round';
   const taken=[];
-  // Reserve existing continent captions and the visible latitude edge labels.
+  // Latitude labels have their own outside gutter; reserve continent captions only.
   if(state.labels)for(const [lon,lat] of [[-104,47],[-60,-16],[20,51],[21,4],[92,44],[135,-26],[0,-80]]){
    const p=projection([lon,lat]),x=p[0]*view.s+view.x,y=p[1]*view.s+view.y;taken.push([x-58,y-11,x+58,y+11]);
   }
-  if(state.latitudes)for(const line of latitudeLines){const y=projection([0,line.lat])[1]*view.s+view.y;const labelMargin=(line.subtitle?26:16)*atlasTextScale();if(y<labelMargin||y>cssH-labelMargin)continue;const width=(cssW<600?150:205)*atlasTextScale();const bottom=y+(line.subtitle?34:15)*atlasTextScale();taken.push([0,y-15,width,bottom],[cssW-width,y-15,cssW,bottom]);}
+
   for(const label of data.labels){
    if(!label.name||!Number.isFinite(label.lon)||!Number.isFinite(label.lat))continue;
    const p=projection([label.lon,label.lat]);if(!p)continue;
@@ -130,12 +135,12 @@
  function zoomAt(factor,clientX,clientY){
   if(!ready||!Number.isFinite(factor)||factor<=0)return;
   const rect=canvas.getBoundingClientRect(),x=clientX===undefined?rect.width/2:clientX-rect.left,y=clientY===undefined?rect.height/2:clientY-rect.top;
-  const next=Math.min(6,Math.max(1,state.zoom*factor));if(next===state.zoom)return;
+  const next=Math.min(maxMapZoom(),Math.max(1,state.zoom*factor));if(next===state.zoom)return;
   const mapX=(x-view.x)/view.s,mapY=(y-view.y)/view.s,s=view.s*next/state.zoom;
-  state.zoom=next;state.panX=x-mapX*s-(rect.width-W*s)/2;state.panY=y-mapY*s-(rect.height-H*s)/2;
+  state.framing='manual';state.zoom=next;state.panX=x-mapX*s-(rect.width-W*s)/2;state.panY=y-mapY*s-(rect.height-H*s)/2;
   q('#tooltip').hidden=true;draw();
  }
- q('#navZoomIn').onclick=()=>zoomAt(1.3);q('#navZoomOut').onclick=()=>zoomAt(1/1.3);q('#navWorld').onclick=()=>reset();
+ q('#navZoomIn').onclick=()=>zoomAt(1.3);q('#navZoomOut').onclick=()=>zoomAt(1/1.3);q('#navWorld').onclick=()=>state.framing==='world'?reset():frameWorld();
  q('#atlasReset').onclick=fullReset;q('#desertBelt').onclick=()=>showDeserts(!settings.desert);
  q('#bordersToggle').onclick=()=>{settings.borders=!settings.borders;if(settings.borders)loadData();sync();draw();};
  q('#countryNames').onchange=e=>{settings.names=e.target.checked;draw();};
@@ -160,7 +165,7 @@
   if(e.pointerType!=='touch'||!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(!gesture)return;
   if(pinch&&pointers.size>=2){
-   const now=pinchState(),rect=canvas.getBoundingClientRect();state.zoom=Math.min(6,Math.max(1,pinch.zoom*now.distance/pinch.distance));const s=pinch.s*state.zoom/pinch.zoom;
+   const now=pinchState(),rect=canvas.getBoundingClientRect();state.framing='manual';state.zoom=Math.min(maxMapZoom(),Math.max(1,pinch.zoom*now.distance/pinch.distance));const s=pinch.s*state.zoom/pinch.zoom;
    state.panX=now.cx-rect.left-pinch.mapX*s-(rect.width-W*s)/2;state.panY=now.cy-rect.top-pinch.mapY*s-(rect.height-H*s)/2;draw();stop(e);
   }
  },{capture:true});
@@ -173,6 +178,6 @@
  canvas.addEventListener('pointerup',endPointer,{capture:true});canvas.addEventListener('pointercancel',endPointer,{capture:true});
  canvas.addEventListener('lostpointercapture',e=>{if(pointers.has(e.pointerId))endPointer(e);},{capture:true});
  window.addEventListener('blur',()=>{pointers.clear();pinch=null;gesture=false;drag=null;});
- window.atlasNavigation={settings,drawBorders,drawNames,drawDesert,sync,zoomAt,reset:fullReset,showDeserts,ready:()=>!!data,labels:()=>labelBoxes.map(l=>({...l,box:[...l.box]}))};
+ window.atlasNavigation={settings,drawBorders,drawNames,drawDesert,sync,zoomAt,frameWorld,reset:fullReset,showDeserts,ready:()=>!!data,labels:()=>labelBoxes.map(l=>({...l,box:[...l.box]}))};
  sync();if(ready)draw();
 })();

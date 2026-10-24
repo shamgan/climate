@@ -40,9 +40,9 @@
  q('.intro').remove();
  const head=q('.map-head');head.querySelector('.eyebrow').textContent='מבט על העולם';
  const open=make('button','drawer-toggle','<span aria-hidden="true">☷</span> כלי המפה');open.id='openDrawer';open.setAttribute('aria-controls','mapDrawer');open.setAttribute('aria-expanded','false');
- // Keep the canvas at the top edge; its changing title and loading messages
- // belong to the tool dock rather than a second page header.
- q('.drawer-scroll').prepend(head,status);
+ // Keep the canvas at the top edge. The title stays in the dock; loading
+ // feedback floats above the map without shifting the controls beneath it.
+ q('.drawer-scroll').prepend(head);q('#mapStage').append(status);
  const foot=q('.map-foot');
  foot.querySelector(':scope > span:last-child')?.remove();
  const tools=q('.map-tools');foot.append(tools);
@@ -51,10 +51,19 @@
  const note=q('#mapNote');note.className='map-guidance';head.querySelector('div').append(note);
  foot.prepend(open);
  const summary=make('div','map-summary');summary.setAttribute('aria-label','מקרא השכבות המוצגות');mapSection.append(summary);
+ const monthControl=q('#monthControl');monthControl.classList.add('map-timeline');monthControl.querySelector('h3').textContent='חודש';monthControl.querySelector('.control-hint')?.remove();summary.append(monthControl);
  const key=make('div','map-key','<div id="compactLegend"></div><button id="openLegend" class="key-link">מקרא מלא ←</button>');summary.append(key);
  // Later modules add their own legends without needing to know this layout.
- const gatherLegends=()=>{mapSection.querySelectorAll(':scope > .learning-key,:scope > .desert-map-key,:scope > .compact-currents').forEach(n=>summary.append(n));};
- new MutationObserver(gatherLegends).observe(mapSection,{childList:true});
+ const gatherAdditions=()=>{
+  mapSection.querySelectorAll(':scope > .learning-key,:scope > .desert-map-key,:scope > .compact-currents').forEach(n=>summary.append(n));
+  const reset=q('#atlasReset');if(reset&&reset.parentElement!==tools){reset.textContent='איפוס';reset.setAttribute('aria-label','איפוס מלא למצב הפתיחה');reset.title='איפוס המפה, השכבות והבחירה למצב הפתיחה';tools.append(reset);}
+  const shortcuts=q('.navigation-shortcuts');if(shortcuts&&!shortcuts.querySelector('button'))shortcuts.remove();
+  const learning=q('.learning-controls');if(learning&&!learning.closest('#learningAccordion')){
+   const accordion=make('details','learning-accordion','<summary>גורמים המשפיעים על האקלים<span class="learning-count" aria-live="polite"></span></summary>');accordion.id='learningAccordion';
+   q('#dockLayers .display-settings').before(accordion);learning.querySelector('h3')?.remove();accordion.append(learning);
+  }
+ };
+ new MutationObserver(gatherAdditions).observe(workspace,{childList:true,subtree:true});
  const readoutButton=make('button','selection-info','מידע על הבחירה ←');readoutButton.id='openInfo';foot.prepend(readoutButton);
  const masthead=q('.masthead'),brand=q('.brand'),actions=q('.header-actions');
  brand.classList.add('drawer-brand');drawer.prepend(brand);
@@ -73,12 +82,12 @@
   drawer.querySelectorAll('.dock-pane').forEach(p=>p.hidden=p.id!=='dock'+name[0].toUpperCase()+name.slice(1));
   q('.drawer-scroll').scrollTop=0;
  }
- function syncOpen(){workspace.classList.toggle('drawer-open',drawer.open&&!narrow.matches);open.setAttribute('aria-expanded',drawer.open);if(ready)requestAnimationFrame(draw);}
+ function syncOpen(){workspace.classList.toggle('drawer-open',drawer.open&&!narrow.matches);open.setAttribute('aria-expanded',drawer.open);open.hidden=drawer.open;if(ready)requestAnimationFrame(draw);}
  function openDrawer(name=dock){
   showTab(name);if(!drawer.open){focusReturn=document.activeElement;narrow.matches?drawer.showModal():drawer.show();}
   syncOpen();q('[data-dock="'+name+'"]').focus({preventScroll:true});
  }
- function closeDrawer(){drawer.close();syncOpen();if(focusReturn?.isConnected)focusReturn.focus({preventScroll:true});else open.focus({preventScroll:true});}
+ function closeDrawer(){drawer.style.transform='';drawer.close();syncOpen();if(focusReturn?.isConnected&&focusReturn.getClientRects().length)focusReturn.focus({preventScroll:true});else open.focus({preventScroll:true});}
  function showInfo(which='data',openIt=true){info=which;syncInfo();if(openIt)openDrawer('info');}
  function syncInfo(){
   if(!climateLayers.settings.currents)info='data';
@@ -89,10 +98,13 @@
  function sync(){
   const s=climateLayers.settings;
   q('#climateBase').setAttribute('aria-pressed',!s.field);
-  q('#climateDetail').hidden=!!s.field;q('#monthControl').hidden=!s.field&&!s.currents;
+  const detail=q('#climateDetail');detail.hidden=false;detail.classList.toggle('detail-disabled',!!s.field);detail.setAttribute('aria-disabled',!!s.field);detail.querySelectorAll('button').forEach(b=>b.disabled=!!s.field);
+  q('#monthControl').hidden=!s.field&&!s.currents&&!window.atlasLearning?.settings.atmosphere&&!window.atlasLearning?.settings.solar;
+  q('#backToClimate')?.remove();
+  const learningCount=q('#learningAccordion .learning-count');if(learningCount){const count=[...q('.learning-controls').querySelectorAll('.learning-switch[aria-pressed="true"]')].length;learningCount.textContent=count?count+' פעילות':'';}
   q('#openCurrents').hidden=!s.currents;q('#currentLabelsToggle').hidden=!s.currents;
   q('#legendHint').hidden=!!s.field;q('.legend-actions').hidden=!!s.field;
-  readoutButton.hidden=!(s.field||s.current||state.selected||state.tab!=='explore');
+  readoutButton.hidden=!(s.point||s.current||state.selected||state.tab!=='explore');
   const compact=q('#compactLegend');
   if(s.field){
    const legend=q('#fieldLegend');compact.innerHTML='<div class="compact-field"><div class="scale-caption">'+(s.field==='temperature'?'מעלות צלזיוס <bdi>°C</bdi>':'מ״מ לחודש')+' · ממוצע <bdi>1991–2020</bdi></div>'+legend.querySelector('.field-gradient').outerHTML+legend.querySelector('.field-ticks').outerHTML+'</div>';
@@ -102,7 +114,7 @@
    compact.setAttribute('aria-label','מקרא צבעי האקלים');
   }
   let currentKey=q('#compactCurrents');
-  if(s.currents){if(!currentKey){currentKey=make('div','compact-currents');currentKey.id='compactCurrents';key.after(currentKey);}currentKey.innerHTML=q('.current-key').innerHTML+'<span class="current-map-caption">זרמי ים · תרשים סכמטי · '+(s.month===1?'ינואר':'יולי')+'</span>';}else currentKey?.remove();
+  if(s.currents){if(!currentKey){currentKey=make('div','compact-currents');currentKey.id='compactCurrents';key.after(currentKey);}currentKey.innerHTML=q('.current-key').innerHTML+'<span class="current-map-caption">זרמי ים · תרשים סכמטי · '+(climateLayers.monthName?climateLayers.monthName(s.month):(s.month===1?'ינואר':'יולי'))+'</span>';}else currentKey?.remove();
   syncInfo();
  }
  open.onclick=()=>drawer.open?closeDrawer():openDrawer();
@@ -133,9 +145,16 @@
  });
  q('#legendItems').addEventListener('click',e=>{if(e.target.closest('[data-region]'))queueMicrotask(()=>showInfo());},true);
  q('#map').addEventListener('pointerdown',()=>{lastSelection=state.selected;lastCurrent=climateLayers.settings.current;lastPoint=climateLayers.settings.point;});
- q('#map').addEventListener('pointerup',()=>{const s=climateLayers.settings;if(s.current&&s.current!==lastCurrent)showInfo('current');else if(state.selected!==lastSelection||s.point!==lastPoint)showInfo('data');});
+ q('#map').addEventListener('pointerup',()=>{const s=climateLayers.settings;if(s.current&&s.current!==lastCurrent)showInfo('current',!narrow.matches);else if(state.selected!==lastSelection||s.point!==lastPoint)showInfo('data',!narrow.matches);});
  q('#project').addEventListener('click',()=>{if(document.body.classList.contains('projection')&&drawer.open)closeDrawer();});
  q('#focusCurrent').addEventListener('click',()=>{if(narrow.matches)closeDrawer();});
+ const sheetHandle=make('button','sheet-handle','<span aria-hidden="true"></span>');sheetHandle.id='sheetHandle';sheetHandle.type='button';sheetHandle.setAttribute('aria-label','סגירת כלי המפה');drawer.prepend(sheetHandle);
+ let sheetDrag=null;
+ sheetHandle.addEventListener('pointerdown',e=>{if(!narrow.matches)return;sheetDrag={id:e.pointerId,y:e.clientY,dy:0};sheetHandle.setPointerCapture(e.pointerId);});
+ sheetHandle.addEventListener('pointermove',e=>{if(!sheetDrag||sheetDrag.id!==e.pointerId)return;sheetDrag.dy=Math.max(0,e.clientY-sheetDrag.y);drawer.style.transform='translateY('+sheetDrag.dy+'px)';});
+ const endSheetDrag=e=>{if(!sheetDrag||sheetDrag.id!==e.pointerId)return;const distance=sheetDrag.dy;sheetDrag=null;drawer.style.transform='';if(distance>65)closeDrawer();};
+ sheetHandle.addEventListener('pointerup',endSheetDrag);sheetHandle.addEventListener('pointercancel',()=>{sheetDrag=null;drawer.style.transform='';});
+ sheetHandle.onclick=()=>{if(narrow.matches)closeDrawer();};
  let wasNarrow=narrow.matches;
  // Headless capture can briefly set a 1px viewport; this is not a real layout change.
  narrow.addEventListener('change',()=>{if(innerWidth<240||narrow.matches===wasNarrow)return;wasNarrow=narrow.matches;const wasOpen=drawer.open;if(wasOpen)drawer.close();syncOpen();if(wasOpen&&!narrow.matches)openDrawer();});

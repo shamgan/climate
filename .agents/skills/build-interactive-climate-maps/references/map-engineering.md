@@ -51,7 +51,7 @@ Use a responsive layout with the map and dock in actual sibling columns. Set min
 
 For a full-screen atlas, size the outer shell to 100dvh with a suitable fallback, hide document overflow, and place internal scrolling on the tools content. Keep the brand, tabs and footer actions in their intended fixed slots. Keep map legends bounded so that opening many layers does not push the canvas below the screen. Test that footer actions remain reachable.
 
-The world projection has its own aspect ratio. Preserve the complete world at reset, even if a portrait viewport has vertical whitespace. Do not fix layout whitespace by arbitrary automatic zoom or cropping.
+The world projection has its own aspect ratio. The latest atlas request chooses height-fit at startup/reset and a separate whole-world action. Track height/world/manual framing explicitly so resizing recalculates an automatic fit but does not erase a manual camera. Height-fit necessarily crops horizontal extent on portrait screens; retain pan, zoom and the whole-world action.
 
 Scale the canvas backing store with devicePixelRatio and its actual content rectangle. Account for borders consistently; obsolete one-pixel assumptions can fail after a borderless layout change. Reuse resize/render scheduling and avoid multiple listeners or loops.
 
@@ -64,13 +64,13 @@ Use one text-scale state. In the atlas, atlasTextScale() returns 1 or 1.4 and th
 - Recalculate collision boxes, text widths, tick spacing and label guards in large mode.
 - Measure enlargement in rendered pixels, not just source font attributes. A wider viewBox can cancel a nominal font-size increase.
 
-Anchor latitude labels to the projected line on both sides. Keep the principal name/number and a smaller subtitle distinguishable. Compact padding/line-height and recenter two-line labels for short viewports. Do not keep obsolete top/bottom guards reserved for removed controls, which can hide polar labels. Test all ten main labels and four tropic subtitles in the full-world view.
+Use five single-line desktop latitude labels in a measured gutter outside the canvas. Include name and degrees, and keep tropic aliases in title tooltips. Recompute gutter width in large-text mode. Mobile defaults to lines without labels; the independent latitude switch hides lines and labels together. Keep consistent polar terminology.
 
 For country/current/city labels, use measured text bounds and prioritized placement. Keep the city marker at its true coordinate while moving only its label with a leader if necessary. Do not promise that collision avoidance will display every country name at every zoom.
 
 ## Cities and climographs
 
-Use twelve genuine monthly climatology values from a compatible source period and method. Never derive a full climograph from January and July alone or insert plausible invented values.
+Use twelve source-backed monthly climatology values from a compatible period and method. All atlas city and climate map values now use real source months. User-authorized estimates require an explicit visible note and method; never silently invent a climograph.
 
 Store the city's display coordinate separately from the sampled grid cell. Display the marker at the city anchor and disclose grid-cell representativeness in the source note.
 
@@ -91,11 +91,11 @@ Scale testing to the change; do not write tests that only repeat implementation 
 | Desert | Assert all BWh/BWk cells included and all non-desert cells transparent; check prominent fill on both fields. |
 | Geometry | Compare parsed numeric feature geometry/membership. JSON serialization can differ for 100 and 100.0 without a geographic difference. |
 | Navigation | Test button, pointer-anchored wheel, drag, pinch, reset and selection after gestures. |
-| Cities | Verify all 12 values, marker projection, month/base-layer persistence and table/chart agreement. Current atlas has 20 cities and 80 Jan/Jul comparisons: 20 × 2 variables × 2 months. |
+| Cities | Verify all 12 values, marker projection, month/base-layer persistence and table/chart agreement. Current atlas has 20 cities and 480 independent comparisons: 20 × 2 variables × 12 months. The four original Jan/Jul frames remain byte-identical. |
 | Full viewport | Assert document scrollWidth/scrollHeight do not exceed viewport, scrolling the document leaves scrollY at zero and canvas top is at the viewport top. Check dock open and closed. |
 | Typography | Compare rendered text sizes for DOM, canvas and SVG, then inspect screenshots for clipping/overlap. |
 | Responsive | Include wide desktop, 1280×720, narrow 320×568 and 390×844, plus short landscape 844×390; test normal/large text and drawer states. These are test cases, not universal design breakpoints. |
-| Latitude labels | Check ten visible principal labels and four subtitles at full-world fit, paired names/numbers, geographic anchoring and pairwise overlap. |
+| Latitude labels | Check five compact desktop labels outside the canvas, zero mobile labels, name/degree consistency, tropic tooltips, switch behavior and no overlap in normal/large text. |
 | Accessibility | Keyboard reachability, focus, tabs, Escape, modal close/focus restoration, switch state labels, contrast and meaningful non-color cues. |
 | Reliability | Browser error collection, lazy data loading, failure/retry and source attribution links. |
 | Teaching models | Hemisphere direction, seasonal changes, polar cases, model/data labeling, and equations independently checked against numeric expectations. |
@@ -115,3 +115,15 @@ Run CI on the candidate, inspect actual browser screenshots and integrate only t
 Publish only when authorized, retaining the canonical link and intended public access. Confirm Pages/hosting deployment and then fetch the public URL anonymously. Verify expected HTML and changed assets, ideally exact hashes. A cached old success page is not verification of the new revision.
 
 Leave a concise record of source/revision, changed paths, test evidence, deployment and public verification. Label any prior version as historical. Report only achieved results and an actual blocker if one remains. Do not install unrelated plugins or migrate hosting merely to avoid investigating the existing project.
+
+## October 2026 interaction review
+
+- Load the requested monthly field lazily, validate hashes/size and cache it. Playback advances only after a successful frame; retry stays on the failed month. A generation token prevents stale requests changing selection or restarting playback after reset/pause.
+- Maintain a single month selector next to the footer legend. On mobile it stays outside the bottom sheet. Do not duplicate Jan/Jul controls in teaching panes.
+- Keep disabled climate detail controls in the same space on continuous layers. Move transient loading status out of the control flow to prevent button jumps.
+- Separate the one full-reset action from world/height framing. Remove duplicate layer selection in the info pane.
+- Generic clicks produce a projected pin and country/region name, including climate mode. Resolve countries by polygon membership with holes/dateline support, not nearest centroid. Keep true selected city metadata and anchor authoritative. Generalized coastal geometry may have no country match; use an honest latitude-region fallback.
+- Use cursor-following values, 10-degree temperature ticks, and a value pointer on the scale. Review crowded mobile endpoints visually.
+- Render contrasting halos under warm/cold currents. Keep priority current labels visible; expose the remainder by hover/selection. Seasonal Somali/Monsoon paths only have Jan/Jul schemas and must be omitted in other months with a note.
+- Intermediate ITCZ positions use a cosine blend of unchanged January/July teaching anchors. Label the estimate at the bottom whenever shown; it is not observed monthly meteorology.
+- Put teaching additions in a collapsed accordion. Use a draggable/keyboard-closeable mobile bottom sheet with focus restoration, and default text at least 12–13px, with meaningful large mode.

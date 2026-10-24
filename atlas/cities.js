@@ -69,7 +69,7 @@
  }
  function bringIntoView(city,force){
   if(!ready)return;const p=projection([city.lon,city.lat]),x=view.x+p[0]*view.s,y=view.y+p[1]*view.s;
-  if(force||x<22||x>cssW-22||y<22||y>cssH-22){state.panX=(W/2-p[0])*view.s;state.panY=(H/2-p[1])*view.s;draw();}
+  if(force||x<22||x>cssW-22||y<22||y>cssH-22){state.framing='manual';state.panX=(W/2-p[0])*view.s;state.panY=(H/2-p[1])*view.s;draw();}
  }
  function drawMarker(){
   const city=currentCity();marker.hidden=markerLabel.hidden=!city||!ready;if(marker.hidden)return;

@@ -34,7 +34,6 @@
  const tab=make('button','','המחשות');tab.id='tabLearning';tab.hidden=true;tab.dataset.dock='learning';tab.setAttribute('role','tab');tab.setAttribute('aria-controls','dockLearning');tab.setAttribute('aria-selected','false');tab.tabIndex=-1;q('.drawer-tabs').append(tab);
  const pane=make('section','dock-pane learning-pane',`
   <label for="learningTopic">בחרו מה לחקור</label><select id="learningTopic" class="learning-topic-select"></select>
-  <div id="learningMonths" class="learning-months" role="group" aria-label="חודש בשכבות ההמחשה"><button data-learning-month="1">ינואר</button><button data-learning-month="7">יולי</button></div>
   <label for="learningPlace">מיקום לבדיקה</label><select id="learningPlace" class="learning-place-select"><option value="">נקודה שנבחרה במפה</option>${places.map((p,i)=>'<option value="'+i+'">'+p[0]+'</option>').join('')}</select>
   <p id="learningLocation" class="learning-location"></p><button id="pickLearningPoint" class="learning-open">בחירת נקודה במפה ←</button>
   <div id="atmosphereLesson">
@@ -172,12 +171,10 @@
   if(!on.includes(settings.topic)&&on.length)settings.topic=on[0];
   q('#learningTopic').innerHTML=on.map(k=>'<option value="'+k+'">'+names[k]+'</option>').join('');q('#learningTopic').value=settings.topic;
   ['atmosphere','terrain','solar'].forEach(k=>q('#'+k+'Lesson').hidden=k!==settings.topic);
-  q('#learningMonths').hidden=settings.topic==='terrain';
   if(settings.atmosphere||settings.solar)q('#monthControl').hidden=false;
-  q('#learningMonths').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.learningMonth)===month()));
   if(!on.length){settings.inspect=false;if(tab.getAttribute('aria-selected')==='true'&&q('#mapDrawer').open)atlasInterface.open('layers');}
   inspect.setAttribute('aria-pressed',settings.inspect);inspect.textContent=settings.inspect?'סיום בדיקת גורמי אקלים':'בדיקת גורמי אקלים';
-  key.innerHTML=(settings.atmosphere?'<span><b style="color:#694582">↗ H L</b> רוחות ולחץ · סכמטי · '+(month()===1?'ינואר':'יולי')+'</span>':'')+(settings.terrain?'<span><b>△</b> הצללת תבליט · ETOPO1 · 0.1°</span>':'')+(settings.solar?'<span><b style="color:#b85e08">☀</b> זנית וקוטב · חישוב ל־15 '+(month()===1?'בינואר':'ביולי')+'</span>':'')+'<button class="learning-key-link" id="keyLearning">הסבר ובדיקה ←</button>';
+  key.innerHTML=(settings.atmosphere?'<span><b style="color:#694582">↗ H L</b> רוחות ולחץ · סכמטי · '+climateLayers.monthName(month())+([1,7].includes(month())?'':' · מיקום ההתכנסות משוער')+'</span>':'')+(settings.terrain?'<span><b>△</b> הצללת תבליט · ETOPO1 · 0.1°</span>':'')+(settings.solar?'<span><b style="color:#b85e08">☀</b> זנית וקוטב · חישוב ל־15 '+('ב'+climateLayers.monthName(month()))+'</span>':'')+'<button class="learning-key-link" id="keyLearning">הסבר ובדיקה ←</button>';
   q('#keyLearning').onclick=()=>openLesson();
   const status=q('#terrainStatus');status.hidden=!settings.terrain||!!terrain;status.innerHTML=terrainError?terrainError+' <button id="retryTerrain">ניסיון נוסף</button>':'טוען נתוני גובה (כ־10 מ״ב)…';if(q('#retryTerrain'))q('#retryTerrain').onclick=loadTerrain;
   q('#learningLocation').innerHTML=coord(settings.point);
@@ -185,7 +182,7 @@
   const elev=elevationAt(...settings.point);q('#terrainElevation').textContent=!terrain?(terrainError?'לא נטען':'טוען…'):elev===null?'מחוץ ליבשה':elev.toLocaleString('he-IL');
   q('#ridgeSelect').value=settings.ridge;q('#ridgeNote').textContent=ridges.find(r=>r.id===settings.ridge).note;
   const metrics=AtlasSolar.metrics(...settings.point,month());
-  q('#solarDate').textContent='15 '+(month()===1?'בינואר':'ביולי')+' · זמן צוהריים שמשי מקומי';q('#solarDaylight').textContent=hours(metrics.daylightHours);q('#solarAltitude').textContent=metrics.solarNoonAltitude.toFixed(1)+'°';
+  q('#solarDate').textContent='15 '+('ב'+climateLayers.monthName(month()))+' · זמן צוהריים שמשי מקומי';q('#solarDaylight').textContent=hours(metrics.daylightHours);q('#solarAltitude').textContent=metrics.solarNoonAltitude.toFixed(1)+'°';
   q('#solarPolar').textContent=metrics.polarDay?'יום קוטבי: השמש מעל האופק כל היממה.':metrics.polarNight?'לילה קוטבי: השמש מתחת לאופק כל היממה.':'אורך היום מוצג בשעות ודקות. הצוהריים השמשיים אינם בהכרח 12:00 בשעון.';
   q('#solarCompare').innerHTML=[1,7].map(m=>{const v=AtlasSolar.metrics(...settings.point,m);return '<tr><th>15 '+(m===1?'בינואר':'ביולי')+'</th><td><bdi>'+hours(v.daylightHours)+'</bdi></td><td><bdi>'+v.solarNoonAltitude.toFixed(1)+'°</bdi></td></tr>';}).join('');
   drawScenes();
@@ -230,10 +227,9 @@
  q('#openLearning').onclick=()=>openLesson();tab.onclick=()=>openLesson();q('#learningTopic').onchange=e=>{settings.topic=e.target.value;stop();sync();};
  q('#learningPlace').value='0';q('#learningPlace').onchange=e=>{if(e.target.value!==''){settings.point=places[Number(e.target.value)].slice(1);sync();draw();}};
  q('#pickLearningPoint').onclick=pick;inspect.onclick=()=>{if(settings.inspect){settings.inspect=false;sync();}else pick();};
- q('#learningMonths').querySelectorAll('button').forEach(b=>b.onclick=()=>q('[data-month="'+b.dataset.learningMonth+'"]').click());
  q('#terrainOpacity').oninput=e=>{settings.terrainOpacity=Number(e.target.value)/100;draw();};
  q('#ridgeSelect').onchange=e=>{settings.ridge=e.target.value;sync();draw();};
- q('#focusRidge').onclick=()=>{const r=ridges.find(r=>r.id===settings.ridge);settings.point=[...r.center];q('#learningPlace').value='';state.zoom=3;const s=Math.min(cssW/W,cssH/H)*state.zoom,p=projection(r.center);state.panX=(W/2-p[0])*s;state.panY=(H/2-p[1])*s;sync();if(innerWidth<=900)atlasInterface.close();draw();};
+ q('#focusRidge').onclick=()=>{const r=ridges.find(r=>r.id===settings.ridge);settings.point=[...r.center];q('#learningPlace').value='';state.framing='manual';state.zoom=3;const s=mapFitScale()*state.zoom,p=projection(r.center);state.panX=(W/2-p[0])*s;state.panY=(H/2-p[1])*s;sync();if(innerWidth<=900)atlasInterface.close();draw();};
  q('#ridgeWorld').onclick=()=>{reset();if(innerWidth<=900)atlasInterface.close();};
  q('#orographicMoist').onchange=e=>{settings.moist=e.target.checked;orographicScene();};
  q('#orographicPlay').onclick=()=>{if(playing){stop();return;}if(sceneTime>=1)sceneTime=0;playing=true;lastFrame=performance.now();q('#orographicPlay').textContent='השהיה';q('#orographicPlay').setAttribute('aria-pressed','true');raf=requestAnimationFrame(frame);};

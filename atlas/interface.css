@@ -153,3 +153,98 @@ body.atlas-ui.large{--base:1rem;--atlas-text-scale:1.4;--dock-width:clamp(350px,
  .atlas-ui .map-summary{max-height:none;overflow:visible}
 }
 
+/* October classroom review: stable controls, map-side time and a mobile sheet. */
+.atlas-ui #resetView{display:none!important}
+.atlas-ui .drawer-toggle[hidden]{display:none!important}
+.atlas-ui .navigation-controls{display:none}
+.atlas-ui .map-tools{display:flex;align-items:center;gap:5px;flex:none}
+.atlas-ui .map-tools #atlasReset,.atlas-ui .map-tools #navWorld{width:auto;min-width:58px;min-height:40px;padding:6px 9px;font-size:.8125rem;white-space:nowrap;margin:0}
+.atlas-ui .map-tools #navWorld{background:#f7faf6;color:#214740;border:1px solid #d4e1d6}
+.atlas-ui .map-foot{flex-wrap:wrap;overflow-x:hidden;row-gap:4px}
+.atlas-ui .map-foot .drawer-toggle{margin-inline-end:auto}
+.atlas-ui .map-foot .selection-info{font-size:.8125rem;padding-inline:8px;min-width:0}
+.atlas-ui #climateDetail{min-height:78px;transition:none}
+.atlas-ui #climateDetail.detail-disabled{opacity:.48;filter:grayscale(.8)}
+.atlas-ui #climateDetail.detail-disabled button{cursor:not-allowed;box-shadow:none}
+.atlas-ui #climateDetail button:disabled{pointer-events:none}
+.atlas-ui .learning-accordion{margin:0 0 14px;border:1px solid #dbe5dc;border-radius:9px;background:#fafbf9;overflow:hidden}
+.atlas-ui .learning-accordion>summary{display:flex;gap:8px;align-items:center;justify-content:space-between;cursor:pointer;padding:12px;min-height:48px;font-size:.875rem;font-weight:700;list-style:none}
+.atlas-ui .learning-accordion>summary::after{content:'+';font-size:1.2rem;line-height:1;flex:none}
+.atlas-ui .learning-accordion[open]>summary::after{content:'−'}
+.atlas-ui .learning-accordion>summary::-webkit-details-marker{display:none}
+.atlas-ui .learning-count{margin-inline-start:auto;font-weight:400;font-size:.8125rem;color:#476a55}
+.atlas-ui .learning-count:empty{display:none}
+.atlas-ui .learning-accordion .learning-controls{padding:0 11px 12px;margin:0;border:0}
+.atlas-ui .learning-accordion .learning-switch{margin-top:5px}
+.atlas-ui .map-summary{max-height:27dvh;flex:0 0 auto}
+.atlas-ui .map-summary #monthControl{margin:0;padding:6px 12px;border:0;border-top:1px solid #dce5de;border-bottom:1px solid #e7ede8;background:#f8faf7;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px}
+.atlas-ui .map-summary #monthControl[hidden]{display:none}
+.atlas-ui .map-summary #monthControl h3{margin:0;font-size:.8125rem;line-height:1.3;font-weight:700}
+.atlas-ui #monthSlot{min-width:0;max-width:100%}
+.atlas-ui .map-summary .month-buttons{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:5px;padding:0;background:transparent;border-radius:0;min-width:0}
+.atlas-ui .map-summary .month-track{display:flex;gap:3px;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scroll-padding:5px;overscroll-behavior:contain}
+.atlas-ui .map-summary .month-buttons [data-month]{flex:1 0 42px;min-width:42px;min-height:36px;padding:5px 4px;font-size:.8125rem;line-height:1.2;white-space:nowrap;border-radius:6px}
+.atlas-ui .map-summary .month-buttons [data-month][aria-pressed=true]{background:#173f40;color:#fff}
+.atlas-ui #playMonths{min-width:38px;min-height:36px;flex:none;padding:5px;font-size:1rem;background:#edf3ed;border:1px solid #c9dbce;border-radius:7px}
+.atlas-ui #monthPlaybackStatus{grid-column:1/-1;font-size:.8125rem;line-height:1.3;color:#4e6760;min-height:1.3em;text-align:start}
+.atlas-ui .map-key{padding-block:6px;min-height:38px}
+.atlas-ui .compact-climate{row-gap:2px}
+.atlas-ui .compact-climate button{font-size:.8125rem;min-height:27px}
+.atlas-ui .compact-field{min-width:0}
+.atlas-ui .compact-field .field-ticks{font-size:.8125rem;height:1.5em}
+.atlas-ui .compact-field .field-ticks:has(.scale-endpoint){height:2.4em}
+.atlas-ui .compact-currents{font-size:.8125rem;padding-block:4px}
+.atlas-ui #currentMapLabels{--label-base:12px}
+.atlas-ui .map-stage .load-status{position:absolute;z-index:12;top:10px;left:10px;right:auto;width:max-content;max-width:min(360px,calc(100% - 20px));padding:9px 12px;margin:0!important;border:1px solid #d5c992;border-radius:9px!important;box-shadow:0 2px 12px #183e3a1c;background:#fff9e8;font-size:.8125rem!important;line-height:1.45;pointer-events:auto}
+.atlas-ui :is(.tiny,.control-hint,.learning-caveat,.learning-sources,.learning-metric span,.learning-key,.learning-key-link,.learning-switch small,.base-layers small,.scale-caption,.map-guidance,.current-map-caption,.layer-help,.city-chart-key,.city-summary,.city-card p,.city-card details,.city-data-table,.city-source-list,.navigation-options p){font-size:.8125rem!important}
+.atlas-ui .drawer-bottom .creator-credit,.atlas-ui .drawer-brand .eyebrow,.atlas-ui .map-head .eyebrow{font-size:.8125rem}
+.atlas-ui .drawer-actions button,.atlas-ui .drawer-actions #project{font-size:.8125rem}
+.atlas-ui .drawer-tabs:has(#tabLearning:not([hidden])) button{font-size:.8125rem;line-height:1.35}
+.atlas-ui .sheet-handle{display:none}
+.atlas-ui .drawer-scroll{scroll-behavior:auto}
+@media(max-width:900px){
+ .atlas-ui .map-drawer[open]{position:fixed;inset:auto 0 0;margin:0 auto;width:100%;max-width:640px;height:min(84dvh,760px);max-height:calc(100dvh - 28px);border:1px solid #d2dfd5;border-bottom:0;border-radius:20px 20px 0 0;box-shadow:0 -12px 48px #173f402e;transform:none}
+ .atlas-ui .map-drawer::backdrop{background:#153b4438;backdrop-filter:none}
+ .atlas-ui .sheet-handle{display:flex;justify-content:center;align-items:center;flex:none;width:100%;height:25px;min-height:25px;padding:0;border:0;border-radius:20px 20px 0 0;background:#f6f8f4;touch-action:none;cursor:grab}
+ .atlas-ui .sheet-handle span{display:block;width:42px;height:4px;border-radius:3px;background:#9eafa6}
+ .atlas-ui .sheet-handle:active{cursor:grabbing}
+ .atlas-ui .drawer-brand{padding:3px 15px 5px}
+ .atlas-ui .drawer-brand h1{font-size:1.25rem}
+ .atlas-ui .drawer-brand .eyebrow{display:none}
+ .atlas-ui .drawer-brand .brand-mark{width:30px;height:30px;font-size:26px}
+ .atlas-ui .drawer-head{padding:0 14px 5px;min-height:36px}
+ .atlas-ui .drawer-head h2{font-size:.95rem}
+ .atlas-ui .drawer-head button{min-height:36px;min-width:36px}
+ .atlas-ui .drawer-tabs button{min-height:42px;padding:6px 3px;font-size:.875rem}
+ .atlas-ui .drawer-bottom{gap:3px;padding:7px 10px max(8px,env(safe-area-inset-bottom))}
+ .atlas-ui .drawer-actions #project{grid-column:1/-1;min-height:28px;padding-block:2px}
+ .atlas-ui .drawer-bottom #applyDrawer{display:none}
+ .atlas-ui .drawer-bottom .creator-credit{font-size:.8125rem;line-height:1.35}
+ .atlas-ui .map-summary{max-height:29dvh;overflow:auto;flex-shrink:0}
+ .atlas-ui .map-summary #monthControl{padding:5px 8px;gap:6px;grid-template-columns:minmax(0,1fr)}
+ .atlas-ui .map-summary #monthControl>h3{display:none}
+ .atlas-ui .map-summary .month-buttons [data-month]{flex:0 0 auto;min-width:42px;min-height:38px;font-size:.8125rem}
+ .atlas-ui #monthPlaybackStatus{font-size:.8125rem}
+ .atlas-ui .map-foot{gap:4px;padding:5px 6px max(5px,env(safe-area-inset-bottom));min-height:48px}
+ .atlas-ui .map-tools{margin-inline-start:auto;gap:4px}
+ .atlas-ui .map-tools button{min-width:32px;width:32px;min-height:38px}
+ .atlas-ui .map-tools #atlasReset,.atlas-ui .map-tools #navWorld{min-width:50px;min-height:38px;padding-inline:6px;font-size:.8125rem}
+ .atlas-ui .drawer-toggle{font-size:.8125rem;min-height:38px;padding:6px 7px}
+ .atlas-ui .map-foot .selection-info{min-height:36px;order:3;flex:1;text-align:start;border:0;background:transparent;padding-block:3px}
+ .atlas-ui .learning-inspect{order:3;flex:1;font-size:.8125rem}
+ .atlas-ui .map-key{padding:5px 9px}
+ .atlas-ui .key-link{font-size:.8125rem;min-height:28px}
+}
+@media(max-height:540px){
+ .atlas-ui .map-drawer[open]{max-height:100dvh}
+ .atlas-ui .drawer-brand{padding-block:3px}
+ .atlas-ui .drawer-brand h1{font-size:1.1rem}
+ .atlas-ui .drawer-head{padding-block:0}
+ .atlas-ui .drawer-tabs button{min-height:36px}
+ .atlas-ui .drawer-bottom .creator-credit{font-size:.8125rem}
+ .atlas-ui .map-summary{max-height:36dvh}
+ .atlas-ui #monthPlaybackStatus{display:none}
+}
+@media(prefers-reduced-motion:reduce){.atlas-ui .map-drawer{scroll-behavior:auto}}
+@media print{.atlas-ui .sheet-handle,.atlas-ui #monthControl{display:none!important}}
+

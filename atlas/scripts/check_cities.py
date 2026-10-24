@@ -6,7 +6,7 @@ baseline=json.loads((root/'scripts/cities_baseline.json').read_text())
 def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
 for name,sha in baseline['assets'].items():assert blob((root/name).read_bytes())==sha,name
 html=(root/'index.html').read_bytes().decode()
-for current,original in baseline.get('htmlReplacements',[]):
+for current,original in baseline.get('uiReviewReplacements',[])+baseline.get('htmlReplacements',[]):
     assert html.count(current)==1,current
     html=html.replace(current,original)
 for a in baseline['htmlAdditions']:
@@ -20,19 +20,19 @@ assert len({c['id'] for c in data['cities']})==20
 manifest=json.loads((root/'data/era5/manifest.json').read_text())
 arrays={}
 for key in ['temperature','precipitation']:
-    for month in [1,7]:arrays[key,month]=gzip.decompress((root/f'data/era5/{key}-{month:02}.bin.gz').read_bytes())
+    for month in range(1,13):arrays[key,month]=gzip.decompress((root/f'data/era5/{key}-{month:02}.bin.gz').read_bytes())
 matches=0
 for c in data['cities']:
     for key in ['temperature','precipitation']:
         layer=manifest['layers'][key];lons=layer['longitudes'];lats=layer['latitudes']
         x=min(range(len(lons)),key=lambda i:abs(lons[i]-c['gridLon']));y=min(range(len(lats)),key=lambda i:abs(lats[i]-c['gridLat']))
         assert abs(lons[x]-c['gridLon'])<1e-8 and abs(lats[y]-c['gridLat'])<1e-8
-        for month in [1,7]:
+        for month in range(1,13):
             raw=struct.unpack_from('<H',arrays[key,month],2*(y*len(lons)+x))[0]
             assert abs(raw*layer['scale']+layer['offset']-c[key][month-1])<1e-7,(c['id'],key,month)
             matches+=1
-assert matches==80
-print('CITY_DATA_PASSED: 20 cities, 12 real months each; all 80 January/July values match the existing map cells',flush=True)
+assert matches==480
+print('CITY_DATA_PASSED: 20 cities, 12 real months each; all 480 monthly values match the independently stored city climatology',flush=True)
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*a):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(root)))
@@ -41,7 +41,10 @@ with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,executable_path=os.environ.get('ATLAS_CHROMIUM_PATH'))
     page=browser.new_page(viewport={'width':1440,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(url);page.wait_for_function('ready && window.atlasCities && atlasCities.ready()')
-    def click(s):page.locator(s).click()
+    def click(s):
+        if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
+        page.locator(s).click()
+        if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def tab(name):
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')
         click('#tab'+name.capitalize())
@@ -58,6 +61,7 @@ with sync_playwright() as p:
     assert page.locator('#cityMarker').is_hidden()
     assert page.locator('#mapStage button').count()==0
     shot('cities-layers-menu')
+    click('#navWorld')
     tab('info');assert page.locator('#cityChooser option').count()==21
     for i in [2,8,3,10,13,17]:
         page.locator('#cityChooser').select_option(str(i));city=data['cities'][i]
@@ -93,7 +97,7 @@ with sync_playwright() as p:
     tab('layers');click('#atlasReset');assert page.locator('#cityMarker').is_hidden()
     assert page.evaluate('climateLayers.settings.point') is None
     # All 20 cities remain selectable, including southern, tropical and cold cases.
-    tab('info')
+    click('#navWorld');tab('info')
     for i,c in enumerate(data['cities']):
         page.locator('#cityChooser').select_option(str(i));marker_check(c)
         assert page.locator('#cityCard [data-rain-month]').count()==12
@@ -114,3 +118,4 @@ with sync_playwright() as p:
     print('CITY_BROWSER_PASSED: desert button moved; 20-city selections; single red marker at true projected coordinates; all 12 chart/table values; keyboard and expanded dialog; original city readout and month/layer changes; reset; mobile/map/panel; optional-data retry; no runtime errors',flush=True)
     browser.close()
 server.shutdown()
+

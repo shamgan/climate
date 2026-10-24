@@ -8,7 +8,7 @@ def git_hash(data): return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+d
 for name,expected in baseline['assets'].items():
     assert git_hash((root/name).read_bytes())==expected, 'Changed pre-existing asset: '+name
 html=(root/'index.html').read_bytes().decode('utf-8')
-for current,original in baseline.get('htmlReplacements',[]):
+for current,original in baseline.get('uiReviewReplacements',[])+baseline.get('htmlReplacements',[]):
     assert html.count(current)==1,current
     html=html.replace(current,original)
 for addition in baseline['htmlAdditions']:
@@ -35,25 +35,37 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:requests.append(r.url))
     page.add_init_script('window.localizedRegions=[];const displayRegion=Intl.DisplayNames.prototype.of;Intl.DisplayNames.prototype.of=function(code){window.localizedRegions.push(code);return displayRegion.call(this,code)}')
     page.goto(url);page.wait_for_function('ready && window.atlasNavigation')
-    def latitude_subtitles(p):
-        assert p.locator('.latitude-subtitle').count()==4
-        assert p.locator('.latitude-subtitle').all_text_contents().count('קו ההיפוך הצפוני')==2
-        assert p.locator('.latitude-subtitle').all_text_contents().count('קו ההיפוך הדרומי')==2
-        boxes=p.locator('.has-subtitle').evaluate_all('''elements=>elements.map(e=>{
-          const line=latitudeLines.find(l=>l.subtitle===e.querySelector('small').textContent),m=e.querySelector('.latitude-main').getBoundingClientRect(),s=e.querySelector('small').getBoundingClientRect();
-          return {mainY:(m.top+m.bottom)/2,lineY:canvas.getBoundingClientRect().top+view.y+projection([0,line.lat])[1]*view.s,subY:s.top,left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,width:innerWidth};
+    def latitude_labels(p,mobile=False):
+        assert p.locator('.latitude-subtitle').count()==0
+        if mobile:
+            assert p.locator('.latitude-label:visible').count()==0
+            assert p.evaluate('state.latitudes'), 'Mobile should retain latitude lines by default'
+            return
+        assert p.locator('.latitude-label').count()==5
+        titles=p.locator('.latitude-label').evaluate_all('es=>es.map(e=>e.title)')
+        assert sum('קו ההיפוך הצפוני' in t for t in titles)==1
+        assert sum('קו ההיפוך הדרומי' in t for t in titles)==1
+        boxes=p.locator('.latitude-label').evaluate_all('''elements=>elements.map(e=>{
+          const r=e.getBoundingClientRect(),c=canvas.getBoundingClientRect();
+          return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,canvasRight:c.right,width:innerWidth};
         })''')
         for b in boxes:
-            assert -1.5<=b['lineY']-b['mainY']<=18,b
-            assert b['subY']>b['lineY'] and b['left']>=0 and b['right']<=b['width']+1,b
-    latitude_subtitles(page)
-    def click(s):page.locator(s).click()
+            assert b['left']>=b['canvasRight']-1 and b['right']<=b['width']+1,b
+            assert b['top']>=0 and b['bottom']<=p.viewport_size['height'],b
+    latitude_labels(page)
+    def click(s):
+        if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
+        page.locator(s).click()
+        if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def dock():
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')
         click('#tabLayers')
     def old_state():return page.evaluate('({state:{...state},climate:{...climateLayers.settings},learning:{...atlasLearning.settings}})')
     def pixels():return page.locator('#map').evaluate('c=>c.toDataURL()')
     def shot(name):page.screenshot(path=str(root/(name+'.png')),full_page=True)
+    startup=old_state();startup_pixels=pixels()
+    assert page.evaluate('state.framing==="height" && Math.abs(H*view.s-cssH)<2')
+    click('#navWorld');assert page.evaluate('state.framing==="world" && state.zoom===1')
     before=old_state();original=pixels()
     assert not any('/data/boundaries/' in r for r in requests), 'Disabled layer fetched data'
     assert page.locator('#bordersToggle').get_attribute('aria-pressed')=='false'
@@ -86,12 +98,13 @@ with sync_playwright() as p:
     assert page.locator('#bordersToggle').get_attribute('aria-pressed')=='true'
     page.keyboard.press('Enter');assert old_state()==before and pixels()==original
     # Existing keys and original buttons remain available; new menu controls share state.
-    click('#navZoomIn');assert abs(page.evaluate('state.zoom')-1.3)<1e-12
+    click('#zoomIn');assert abs(page.evaluate('state.zoom')-1.3)<1e-12
     assert page.locator('#navZoomValue').inner_text()=='130%'
     click('#zoomIn');assert abs(page.evaluate('state.zoom')-1.69)<1e-12
     click('#navWorld');assert page.evaluate('state.zoom===1 && state.panX===0 && state.panY===0')
     page.locator('#map').focus();page.keyboard.press('+');assert page.evaluate('state.zoom')>1
-    page.keyboard.press('Home');assert page.evaluate('state.zoom')==1
+    page.keyboard.press('Home');assert page.evaluate('state.framing==="height" && state.panX===0 && state.panY===0')
+    click('#navWorld')
     # Wheel zoom preserves the geographic location below the pointer away from clamped edges.
     page.evaluate('atlasNavigation.zoomAt(2)')
     rect=page.locator('#map').bounding_box();x=round(rect['x']+rect['width']*.55);y=round(rect['y']+rect['height']*.47)
@@ -103,7 +116,7 @@ with sync_playwright() as p:
     page.mouse.down();page.mouse.move(x+50,y+35,steps=5);page.mouse.up()
     assert page.evaluate('state.selected')==selected and page.evaluate('[state.panX,state.panY]')!=pan
     dock();click('#bordersToggle')
-    page.evaluate('()=>{state.zoom=5;draw();const p=projection([20,45]);state.panX=-(p[0]-W/2)*view.s;state.panY=-(p[1]-H/2)*view.s;draw()}')
+    page.evaluate('()=>{state.framing="manual";state.zoom=5;draw();const p=projection([20,45]);state.panX=-(p[0]-W/2)*view.s;state.panY=-(p[1]-H/2)*view.s;draw()}')
     labels=page.evaluate('atlasNavigation.labels()');assert len(labels)>5,labels
     for i,a in enumerate(labels):
         for b in labels[i+1:]:
@@ -112,11 +125,12 @@ with sync_playwright() as p:
     shot('navigation-europe')
     click('#countryNames');assert page.evaluate('atlasNavigation.labels().length')==0
     click('#countryNames');assert page.evaluate('atlasNavigation.labels().length')>0
-    page.evaluate('()=>{state.zoom=6;draw();const p=projection([35.3,31.8]);state.panX=-(p[0]-W/2)*view.s;state.panY=-(p[1]-H/2)*view.s;draw()}')
+    page.evaluate('()=>{state.framing="manual";state.zoom=6;draw();const p=projection([35.3,31.8]);state.panX=-(p[0]-W/2)*view.s;state.panY=-(p[1]-H/2)*view.s;draw()}')
     assert all(l['code']!='PS' for l in page.evaluate('atlasNavigation.labels()'))
     shot('israel-custom-boundaries')
     # Every existing base field and overlay can still coexist with boundaries.
     click('#navWorld')
+    click('#learningAccordion summary')
     for name in ['atmosphere','solar','terrain']:click('#'+name+'Toggle')
     page.wait_for_function('atlasLearning.terrainReady()',timeout=60000)
     click('#currentsToggle');click('#desertBelt')
@@ -134,10 +148,10 @@ with sync_playwright() as p:
     shot('boundaries-overlay-switch')
     shot('navigation-combined')
     # Full reset clears every overlay, selection, month, camera and teaching animation.
-    page.evaluate('()=>{state.labels=false;state.latitudes=false;state.zoom=4;state.panX=80;climateLayers.settings.month=7;atlasLearning.settings.point=[10,66];atlasLearning.settings.moist=false;document.querySelector("#orographicStep").click();render()}')
-    click('#atlasReset');assert old_state()==before
+    page.evaluate('()=>{state.labels=false;state.latitudes=false;state.framing="manual";state.zoom=4;state.panX=80;climateLayers.settings.month=7;atlasLearning.settings.point=[10,66];atlasLearning.settings.moist=false;document.querySelector("#orographicStep").click();render()}')
+    click('#atlasReset');assert old_state()==startup
     assert page.evaluate('atlasLearning.sceneProgress()')==0
-    assert pixels()==original and not page.evaluate('atlasNavigation.settings.borders')
+    assert pixels()==startup_pixels and not page.evaluate('atlasNavigation.settings.borders')
     # Desert switch is independent and does not reset other map state.
     before_desert=old_state();image=pixels();click('#desertBelt')
     assert old_state()==before_desert and pixels()!=image
@@ -145,12 +159,13 @@ with sync_playwright() as p:
     assert 'ערבות' in page.locator('#desertBeltNote').inner_text()
     shot('navigation-desert-belt')
     page.locator('#clear').evaluate('b=>b.click()');assert page.evaluate('atlasNavigation.settings.desert')
-    click('#atlasReset');assert old_state()==before and pixels()==original
+    click('#atlasReset');assert old_state()==startup and pixels()==startup_pixels
     # Actual touch dispatch, not synthetic JS PointerEvents. Pinch must not select a climate.
     mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
     mp=mobile.new_page();mp.on('pageerror',lambda e:errors.append(str(e)))
     mp.goto(url);mp.wait_for_function('ready && window.atlasNavigation')
-    latitude_subtitles(mp)
+    latitude_labels(mp,True)
+    mp.locator('#navWorld').click()
     mp.locator('#map').scroll_into_view_if_needed()
     mr=mp.locator('#map').bounding_box();cx=mr['x']+mr['width']/2;cy=mr['y']+mr['height']/2
     session=mobile.new_cdp_session(mp)
@@ -172,15 +187,16 @@ with sync_playwright() as p:
     mp.screenshot(path=str(root/'boundaries-mobile-switch.png'),full_page=True)
     mp.locator('#bordersToggle').click();assert not mp.evaluate('atlasNavigation.settings.borders')
     mp.locator('#bordersToggle').click();assert mp.evaluate('atlasNavigation.settings.borders')
-    mp.locator('#navZoomIn').click();assert mp.evaluate('state.zoom')>2.5
+    mp.locator('#closeDrawer').click();mp.locator('#zoomIn').click();assert mp.evaluate('state.zoom')>2.5
+    mp.locator('#openDrawer').click()
     assert mp.evaluate('document.documentElement.scrollWidth<=innerWidth')
     mp.locator('.drawer-scroll').evaluate('e=>e.scrollTop=e.scrollHeight')
     mp.screenshot(path=str(root/'navigation-mobile-menu.png'),full_page=True)
-    mp.locator('#navWorld').click();assert mp.evaluate('state.zoom===1 && state.panX===0 && state.panY===0')
-    mp.locator('#desertBelt').click();assert mp.locator('#mapDrawer').is_visible()
+    mp.locator('#closeDrawer').click();mp.locator('#navWorld').click();assert mp.evaluate('state.zoom===1 && state.panX===0 && state.panY===0')
+    mp.locator('#openDrawer').click();mp.locator('#desertBelt').click();assert mp.locator('#mapDrawer').is_visible()
     assert mp.evaluate('atlasNavigation.settings.desert')
-    mp.locator('#atlasReset').click();assert not mp.locator('#mapDrawer').is_visible()
-    assert mp.evaluate('state.view==="major" && state.selected===0 && state.zoom===1 && !atlasNavigation.settings.borders')
+    mp.locator('#closeDrawer').click();mp.locator('#atlasReset').click();assert not mp.locator('#mapDrawer').is_visible()
+    assert mp.evaluate('state.view==="major" && state.selected===0 && state.framing==="height" && state.panX===0 && state.panY===0 && !atlasNavigation.settings.borders')
     mp.screenshot(path=str(root/'navigation-mobile-map.png'),full_page=True)
     assert mp.locator('#mapStage button').count()==0
     # Network errors only affect the optional boundary layer, with a real retry.
@@ -190,6 +206,6 @@ with sync_playwright() as p:
     assert retry.locator('#layerStatus').is_hidden()
     retry.unroute('**/data/boundaries/countries.json*');retry.locator('#retryBorders').click();retry.wait_for_function('atlasNavigation.ready()')
     assert not errors,errors
-    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; exact requested local geometry/label filter; four anchored tropic subtitles; boundary switch placement and style; existing layers, desert marking and both months combined; full reset; independent desert switch; mobile/menu/keyboard; retry; no runtime errors',flush=True)
+    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; exact requested local geometry/label filter; single-side gutter latitude labels with tooltip subtitles and mobile lines-only; boundary switch placement and style; existing layers, desert marking and both months combined; full reset; independent desert switch; mobile/menu/keyboard; retry; no runtime errors',flush=True)
     browser.close()
 server.shutdown()

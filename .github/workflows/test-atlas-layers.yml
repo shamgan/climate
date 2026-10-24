@@ -29,6 +29,7 @@ jobs:
         run: |
           node atlas/scripts/check_solar.cjs
           node atlas/scripts/check_atmosphere.cjs
+          node atlas/scripts/check_places.cjs
       - name: Check additive teaching layers and preserve existing layers
         run: python -u atlas/scripts/check_learning.py
       - name: Check navigation, boundaries, reset and desert switch

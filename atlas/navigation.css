@@ -28,3 +28,24 @@
 .latitude-label.has-subtitle{flex-direction:column;gap:2px;transform:translateY(calc(-.6em - 4.5px))}
 .latitude-main{display:flex;align-items:center;gap:4px}
 .latitude-subtitle{display:block;font-size:.8em;font-weight:500;line-height:1.2}
+
+/* Latitude captions occupy a separate rail, outside the geographic viewport. */
+.atlas-ui #mapStage{--latitude-gutter:0px}
+.atlas-ui #mapStage #map{inset:0 auto 0 0;width:calc(100% - var(--latitude-gutter));height:100%}
+.atlas-ui #mapStage #currentMapLabels{inset:0 auto 0 0;width:calc(100% - var(--latitude-gutter))}
+.atlas-ui #mapStage #latitudeLabels{inset:0 0 0 auto;width:var(--latitude-gutter);--label-base:13px;font-size:calc(13px * var(--atlas-text-scale))!important;background:#f9faf8;border-inline-end:1px solid #d7e2df;overflow:visible;pointer-events:none;z-index:2}
+.atlas-ui #mapStage #latitudeLabels[hidden]{display:none!important}
+.atlas-ui #mapStage #latitudeLabels .latitude-label{right:6px;left:auto;max-width:calc(100% - 10px);padding:3px 0;gap:4px;white-space:nowrap;flex-wrap:nowrap;flex-direction:row;line-height:1.25;transform:translateY(-50%);border:0;border-radius:0;box-shadow:none;background:transparent;color:#214f61;font-weight:600;pointer-events:auto;cursor:help}
+.atlas-ui #mapStage #latitudeLabels .latitude-label:focus-visible{outline:2px solid #245d75;outline-offset:3px}
+.atlas-ui #mapStage #latitudeLabels .equator-label{font-weight:750}
+.atlas-ui #mapStage #latitudeLabels .latitude-label bdi{font-weight:600}
+.atlas-ui #latitudes{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;background:#fff;color:#244c43;border:1px solid #d4e1d6;min-height:46px;margin-top:9px;font-size:.87rem;transition:none}
+.atlas-ui #latitudes:after{content:'';flex:none;width:34px;height:20px;border-radius:20px;background:#b7c5bc;box-shadow:inset -15px 0 0 -3px #fff;border:2px solid #b7c5bc}
+.atlas-ui #latitudes[aria-pressed=true]{border-color:#5b8c71;background:#eef5ef}
+.atlas-ui #latitudes[aria-pressed=true]:after{background:#367255;border-color:#367255;box-shadow:inset 15px 0 0 -3px #fff}
+.atlas-ui .map-tools #navWorld{width:auto;min-width:72px;min-height:40px;margin:0;padding:4px 9px;font-size:.8rem;white-space:nowrap}
+@media(max-width:900px){
+ .atlas-ui #mapStage{--latitude-gutter:0px!important}
+ .atlas-ui #mapStage #latitudeLabels{display:none!important}
+ .atlas-ui .map-tools #navWorld{min-width:65px;padding-inline:6px;font-size:.75rem}
+}

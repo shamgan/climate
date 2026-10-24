@@ -10,9 +10,17 @@
   1:[[-180,3],[-150,4],[-120,4],[-90,1],[-60,-8],[-30,0],[0,-3],[25,-12],[50,-10],[80,-7],[110,-8],[135,-14],[160,-5],[180,3]],
   7:[[-180,7],[-150,8],[-120,10],[-90,12],[-60,9],[-30,8],[0,15],[25,18],[50,18],[80,22],[110,16],[135,12],[160,8],[180,7]]
  };
- function itcz(lon,month){
-  const pts=anchors[month];if(!pts||!Number.isFinite(lon)||Math.abs(lon)>180)throw new RangeError('Invalid month/longitude');
+ function anchorLatitude(lon,month){
+  const pts=anchors[month];
   for(let i=1;i<pts.length;i++)if(lon<=pts[i][0]){const a=pts[i-1],b=pts[i];return a[1]+(b[1]-a[1])*(lon-a[0])/(b[0]-a[0]);}
+ }
+ function itcz(lon,month){
+  if(!Number.isInteger(month)||month<1||month>12||!Number.isFinite(lon)||Math.abs(lon)>180)throw new RangeError('Invalid month/longitude');
+  if(anchors[month])return anchorLatitude(lon,month);
+  // Deliberate teaching estimate between the unchanged January/July sketches.
+  // Cosine seasonal blending is not an observed monthly ITCZ climatology.
+  const weight=(1-Math.cos((month-1)*Math.PI/6))/2;
+  return anchorLatitude(lon,1)*(1-weight)+anchorLatitude(lon,7)*weight;
  }
  function wind(lon,lat,month){
   if(!Number.isFinite(lat)||Math.abs(lat)>90)throw new RangeError('Invalid latitude');
