@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 root = pathlib.Path(__file__).parent.parent
 # Original data/field fingerprints; interface.css updated for the authorized viewport UI.
 preserved = {
-    'layers.js':'cc7f4e338e18e0a30cc2220c048a0838ebef1203',
+    'layers.js':'a1ff0c3b239ec18bb06c905c68e725ff7f325d92',
     'layers.css':'49d66d14ed993872f4273378b22546ea38d1fa7a',
     'currents.js':'f1aa87d81cd8fa8a9f1361cde68af62cf95369ce',
     'interface.css':'abf9ee105360ef076a23860572578c935d7b012e',

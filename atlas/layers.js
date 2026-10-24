@@ -184,7 +184,7 @@ function createClimateLayers({getMap,refresh,focus}) {
   const s=view.s,path=d3.geoPath(projection,ctx);
   for(const c of drawableCurrents()){
    const points=currentPoints(c),line={type:'LineString',coordinates:points},selected=settings.current===c.id;
-   ctx.save();ctx.globalAlpha=settings.current&&!selected ? 0.38 : 1;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();path(line);ctx.strokeStyle='#102f3d99';ctx.lineWidth=(selected?10:8)/s;ctx.stroke();
+   ctx.save();ctx.globalAlpha=settings.current&&!selected ? 0.65 : 1;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();path(line);ctx.strokeStyle='#102f3d99';ctx.lineWidth=(selected?10:8)/s;ctx.stroke();
    ctx.beginPath();path(line);ctx.strokeStyle='#fff';ctx.lineWidth=(selected?8:6)/s;ctx.stroke();
    ctx.beginPath();path(line);ctx.strokeStyle=currentColors[c.type];ctx.lineWidth=(selected?4:3)/s;if(c.type==='seasonal')ctx.setLineDash([7/s,3/s]);ctx.stroke();ctx.setLineDash([]);
    const dense=[];
@@ -285,7 +285,8 @@ function createClimateLayers({getMap,refresh,focus}) {
    const percent=v=>100*(v-f.ticks[0])/(f.ticks.at(-1)-f.ticks[0]);
    const gradient=f.colors.map((color,i)=>color+' '+percent(f.ticks[i])+'%').join(',');
    const legendTicks=settings.field==='temperature'?[-65,-60,-50,-40,-30,-20,-10,0,10,20,30,40]:[0,100,200,400,600,900];
-   $('#fieldLegend').innerHTML='<h3>'+f.name+' · '+months[settings.month]+' <bdi>'+f.unit+'</bdi></h3><div class="field-gradient" style="background:linear-gradient(to right,'+gradient+')"><span class="field-value-indicator" hidden></span></div><div class="field-ticks">'+legendTicks.map(v=>'<span style="left:'+percent(v)+'%"'+(settings.field==='temperature'&&v===-65?' class="scale-endpoint"':'')+'><bdi>'+(v===f.ticks.at(-1)?v+'+':v)+'</bdi>'+'</span>').join('')+'</div><p class="tiny">'+(settings.field==='temperature'?'טמפרטורת אוויר סמוך לפני השטח · ERA5':'ממוצע כמות חודשית · ERA5')+' · Copernicus / World Bank CCKP · 1991–2020. רשת 0.25° × 0.25°. אותו סולם צבעים בכל החודשים. הגדילו לצפייה בפרטים. סימן + מציין גם ערכים גבוהים מסף הסולם.</p>';
+   const tickMarks=legendTicks.map(v=>'<i class="field-scale-tick" aria-hidden="true" style="left:'+percent(v)+'%"></i>').join('');
+   $('#fieldLegend').innerHTML='<h3>'+f.name+' · '+months[settings.month]+' <bdi>'+f.unit+'</bdi></h3><div class="field-gradient" style="background:linear-gradient(to right,'+gradient+')"><span class="field-value-indicator" hidden></span>'+tickMarks+'</div><div class="field-ticks">'+legendTicks.map(v=>'<span style="left:'+percent(v)+'%"'+(settings.field==='temperature'&&v===-65?' class="scale-endpoint"':'')+'><bdi>'+(v===f.ticks.at(-1)?v+'+':v)+'</bdi>'+'</span>').join('')+'</div><p class="tiny">'+(settings.field==='temperature'?'טמפרטורת אוויר סמוך לפני השטח · ERA5':'ממוצע כמות חודשית · ERA5')+' · Copernicus / World Bank CCKP · 1991–2020. רשת 0.25° × 0.25°. אותו סולם צבעים בכל החודשים. הגדילו לצפייה בפרטים. סימן + מציין גם ערכים גבוהים מסף הסולם.</p>';
    renderPanel();
   }
   if(settings.currents){
