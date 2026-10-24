@@ -64,8 +64,8 @@ with sync_playwright() as p:
         rows=page.locator('#cityCard .city-data-table tbody tr');assert rows.count()==12
         for month in range(12):
             values=rows.nth(month).locator('td').all_text_contents()
-            assert float(values[0].replace(',',''))==city['temperature'][month]
-            assert float(values[1].replace(',',''))==city['precipitation'][month]
+            assert float(values[0].replace(',','').replace('\u200e',''))==city['temperature'][month]
+            assert float(values[1].replace(',','').replace('\u200e',''))==city['precipitation'][month]
         assert 'לא מדידה בתחנה' in page.locator('#cityCard').inner_text()
         if i in [2,8,3]:shot('cities-'+city['id']+'-desktop')
     # Months are keyboard/touch accessible; expanded dialog returns to the info panel.
