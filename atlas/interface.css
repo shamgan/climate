@@ -264,5 +264,9 @@ body.atlas-ui.large{--base:1rem;--atlas-text-scale:1.4;--dock-width:clamp(350px,
 @media(max-width:600px){
  .atlas-ui .map-key:has(.compact-field) .field-ticks{margin-top:3px}
  .atlas-ui .map-key:has(.compact-field) .field-ticks:has(.scale-endpoint){height:4em}
+ .atlas-ui.large .map-foot{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 5px}
+ .atlas-ui.large .map-foot .drawer-toggle{grid-column:2;grid-row:1;margin:0}
+ .atlas-ui.large .map-foot .selection-info{grid-column:1;grid-row:1;width:100%;min-width:0;text-align:start}
+ .atlas-ui.large .map-foot .map-tools{grid-column:1/-1;grid-row:2;justify-self:end;margin:0}
 }
 

@@ -129,10 +129,10 @@ with sync_playwright() as p:
     assert page.locator('#playMonths').get_attribute('aria-pressed')=='false'
     click('[data-month="7"]')
     # Click feedback identifies a sourced location and retains its exact anchor.
-    page.wait_for_function('window.atlasPlaces && atlasPlaces.ready()',timeout=60000)
     point=[20,5]
     xy=page.evaluate('p=>{const v=projection(p),r=canvas.getBoundingClientRect();return [r.left+view.x+v[0]*view.s,r.top+view.y+v[1]*view.s]}',point)
     page.mouse.click(*xy);page.wait_for_function('document.querySelector("#selectedPointMarker") && !document.querySelector("#selectedPointMarker").hidden')
+    page.wait_for_function('window.atlasPlaces && atlasPlaces.ready()',timeout=60000)
     pin=page.locator('#selectedPointMarker')
     projected=page.evaluate('()=>{const p=projection(climateLayers.settings.point);return [view.x+p[0]*view.s,view.y+p[1]*view.s]}')
     actual=pin.evaluate('e=>[parseFloat(e.style.left),parseFloat(e.style.top)]')
