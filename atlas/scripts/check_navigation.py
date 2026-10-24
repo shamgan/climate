@@ -42,11 +42,20 @@ with sync_playwright() as p:
     assert not any('/data/boundaries/' in r for r in requests), 'Disabled layer fetched data'
     assert page.locator('#bordersToggle').get_attribute('aria-pressed')=='false'
     assert page.locator('#navZoomOut').is_disabled()
+    assert page.locator('#bordersControl').evaluate('e=>e.parentElement.querySelector("h3").textContent')=='מוסיפים למפה'
+    assert page.locator('#bordersControl').evaluate('e=>e.previousElementSibling.id')=='desertBeltNote'
+    assert not page.locator('.navigation-controls #bordersToggle').count()
+    def switch_style(selector):
+        return page.locator(selector).evaluate('e=>{const s=getComputedStyle(e,"::after");return [s.width,s.height,s.backgroundColor,s.boxShadow]}')
+    assert switch_style('#bordersToggle')==switch_style('#currentsToggle')
     click('#bordersToggle');page.wait_for_function('atlasNavigation.ready()')
     assert old_state()==before and pixels()!=original
     assert not page.evaluate('atlasNavigation.labels().length')
     shot('navigation-world')
     click('#bordersToggle');assert pixels()==original and old_state()==before
+    page.locator('#bordersToggle').focus();page.keyboard.press('Space')
+    assert page.locator('#bordersToggle').get_attribute('aria-pressed')=='true'
+    page.keyboard.press('Enter');assert old_state()==before and pixels()==original
     # Existing keys and original buttons remain available; new menu controls share state.
     click('#navZoomIn');assert abs(page.evaluate('state.zoom')-1.3)<1e-12
     assert page.locator('#navZoomValue').inner_text()=='130%'
@@ -78,11 +87,19 @@ with sync_playwright() as p:
     click('#navWorld')
     for name in ['atmosphere','solar','terrain']:click('#'+name+'Toggle')
     page.wait_for_function('atlasLearning.terrainReady()',timeout=60000)
-    click('#currentsToggle')
+    click('#currentsToggle');click('#desertBelt')
+    assert switch_style('#bordersToggle')==switch_style('#currentsToggle')
     for field in ['temperature','precipitation']:
         click('[data-field="'+field+'"]');page.wait_for_function('document.querySelector("#layerStatus").hidden')
-        prev=old_state();image=pixels();click('#bordersToggle');assert old_state()==prev
-        click('#bordersToggle');assert old_state()==prev and pixels()==image
+        for month in [1,7]:
+            click('[data-month="'+str(month)+'"]')
+            assert page.evaluate('atlasNavigation.settings.borders && atlasNavigation.settings.desert')
+            prev=old_state();image=pixels();click('#bordersToggle');assert old_state()==prev and pixels()!=image
+            assert page.evaluate('atlasNavigation.settings.desert')
+            click('#bordersToggle');assert old_state()==prev and pixels()==image
+            assert page.evaluate('atlasNavigation.settings.desert')
+    page.locator('#bordersToggle').scroll_into_view_if_needed()
+    shot('boundaries-overlay-switch')
     shot('navigation-combined')
     # Full reset clears every overlay, selection, month, camera and teaching animation.
     page.evaluate('()=>{state.labels=false;state.latitudes=false;state.zoom=4;state.panX=80;climateLayers.settings.month=7;atlasLearning.settings.point=[10,66];atlasLearning.settings.moist=false;document.querySelector("#orographicStep").click();render()}')
@@ -116,6 +133,12 @@ with sync_playwright() as p:
     touches('touchStart',[(cx,cy)]);touches('touchMove',[(cx+35,cy+25)]);touches('touchEnd',[])
     assert mp.evaluate('[state.panX,state.panY]')!=pos and mp.evaluate('state.selected')==old['selected']
     mp.locator('#openDrawer').click();mp.locator('#bordersToggle').click();mp.wait_for_function('atlasNavigation.ready()')
+    assert mp.locator('#bordersControl').evaluate('e=>e.parentElement.querySelector("h3").textContent')=='מוסיפים למפה'
+    assert mp.locator('#mapDrawer').is_visible()
+    mp.locator('#bordersToggle').scroll_into_view_if_needed()
+    mp.screenshot(path=str(root/'boundaries-mobile-switch.png'),full_page=True)
+    mp.locator('#bordersToggle').click();assert not mp.evaluate('atlasNavigation.settings.borders')
+    mp.locator('#bordersToggle').click();assert mp.evaluate('atlasNavigation.settings.borders')
     mp.locator('#navZoomIn').click();assert mp.evaluate('state.zoom')>2.5
     assert mp.evaluate('document.documentElement.scrollWidth<=innerWidth')
     mp.locator('.drawer-scroll').evaluate('e=>e.scrollTop=e.scrollHeight')
@@ -134,6 +157,6 @@ with sync_playwright() as p:
     assert retry.locator('#layerStatus').is_hidden()
     retry.unroute('**/data/boundaries/countries.json*');retry.locator('#retryBorders').click();retry.wait_for_function('atlasNavigation.ready()')
     assert not errors,errors
-    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; existing layers combined; full reset; independent desert switch; mobile/menu/keyboard; retry; no runtime errors',flush=True)
+    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; boundary switch placement and style; existing layers, desert marking and both months combined; full reset; independent desert switch; mobile/menu/keyboard; retry; no runtime errors',flush=True)
     browser.close()
 server.shutdown()

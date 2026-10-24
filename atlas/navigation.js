@@ -9,12 +9,12 @@
  shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>הפסים מסמנים את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא.</p>';
  q('#dockLayers').prepend(shortcuts);
  const controls=document.createElement('section');controls.className='navigation-controls';
- controls.innerHTML=`<h3>ניווט וגבולות מדינות</h3>
+ controls.innerHTML=`<h3>ניווט במפה</h3>
   <div class="navigation-zoom" role="group" aria-label="הגדלה והקטנה של המפה">
    <button id="navZoomOut" aria-label="הקטנת המפה">−</button><output id="navZoomValue" aria-label="שיעור הגדלת המפה">100%</output><button id="navZoomIn" aria-label="הגדלת המפה">+</button>
   </div><button id="navWorld" class="navigation-world">חזרה למפת העולם</button>
   <p class="control-hint">במחשב: גלגלת להגדלה וגרירה לתזוזה. בטלפון: צביטה בשתי אצבעות. במקלדת: מיקוד במפה, ‎+ / − וחצים.</p>
-  <button id="bordersToggle" class="navigation-borders" aria-pressed="false" aria-controls="borderOptions"><span aria-hidden="true">▱</span><span>גבולות מדינות</span><span class="navigation-check" aria-hidden="true">✓</span></button>
+  <button id="bordersToggle" class="navigation-borders" aria-pressed="false" aria-controls="borderOptions">גבולות מדינות</button>
   <div id="borderStatus" class="navigation-status" role="status" hidden></div>
   <div id="borderOptions" class="navigation-options" hidden>
    <label><input id="countryNames" type="checkbox" checked>שמות מדינות בהגדלה</label>
@@ -23,6 +23,9 @@
    <details><summary>מקור הגבולות</summary><p>Natural Earth, קנה מידה 1:50 מיליון. זהו מידע מוכלל לפי מדיניות המקור, אינו מפת גבולות משפטית או עדכון בזמן אמת. קווי מחלוקת מסומנים בקו מקווקו.</p><p><a href="https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-boundary-lines-2/" target="_blank" rel="noopener">נתוני הגבולות</a> · <a href="https://www.naturalearthdata.com/about/disputed-boundaries-policy/" target="_blank" rel="noopener">מדיניות התיחום</a> · <a href="data/boundaries/countries.json" target="_blank" rel="noopener">פרטי הנתונים והגרסה</a></p></details>
   </div>`;
  q('#dockLayers .display-settings').before(controls);
+ const borderControls=document.createElement('div');borderControls.id='bordersControl';borderControls.className='navigation-overlay';
+ borderControls.append(q('#bordersToggle'),q('#borderStatus'),q('#borderOptions'));
+ q('#currentsControl').after(borderControls);
  let data=null,pending=null,error='',labelBoxes=[],desertRaster=null;
  const desertActive=()=>settings.desert;
  const desertKey=document.createElement('div');desertKey.id='desertMapKey';desertKey.className='desert-map-key';desertKey.hidden=true;

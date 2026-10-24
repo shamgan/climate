@@ -25,26 +25,30 @@
     "layers.js": "936b564d2111997c10495befbba1417796c53389",
     "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
     "learning-layers.js": "547ca81f5af72f0cc90753ace60a016a566942ca",
-    "navigation.css": "4b48027d2594b151fb70183ae9a4499523f370d0",
-    "navigation.js": "dbfce59fbe315175b5bbaa7bdb2ab96233ccb45a",
+    "navigation.css": "747b1c281bdbbf5fbf02f26921bf8b0f5483719f",
+    "navigation.js": "447d734ba7cffa0dd5878604169641757e5f8dbf",
     "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
   },
   "htmlReplacements": [
     [
-      "navigation.css?v=20261024-2",
+      "navigation.css?v=20261024-3",
       "navigation.css?v=20261024-1"
     ],
     [
-      "navigation.js?v=20261024-2",
+      "navigation.js?v=20261024-3",
       "navigation.js?v=20261024-1"
     ],
     [
-      " window.atlasLearning?.draw();\n window.atlasNavigation?.drawBorders();\n climateLayers.drawCurrents();\n window.atlasNavigation?.drawDesert();",
+      " window.atlasLearning?.draw();\n climateLayers.drawCurrents();\n window.atlasNavigation?.drawDesert();\n window.atlasNavigation?.drawBorders();",
       " window.atlasNavigation?.drawDesert();\n window.atlasLearning?.draw();\n window.atlasNavigation?.drawBorders();\n climateLayers.drawCurrents();"
     ]
   ],
   "desertRevision": {
     "baseline": "63ef92ab0608c3dff67d6f329592e1478b8c7c2c",
     "changes": "Independent desert overlay switch and draw order; navigation asset hashes updated only for this requested revision."
+  },
+  "bordersRevision": {
+    "baseline": "9e795a1e48d380eea256fe1b5018c4142a061470",
+    "changes": "Move boundaries into Adds to map with shared switch styling; draw boundaries above desert marking. Boundary dataset and independent state unchanged."
   }
 }

@@ -8,9 +8,6 @@
 .navigation-zoom button{min-width:44px;min-height:44px;padding:6px;font-size:1.35rem}
 .navigation-zoom output{text-align:center;font-variant-numeric:tabular-nums;font-size:.9rem}
 .navigation-world{width:100%;margin:7px 0 10px;font-size:.85rem}
-.navigation-controls .navigation-borders{display:flex;align-items:center;gap:10px;width:100%;text-align:right;font-size:.9rem;min-height:46px}
-.navigation-borders .navigation-check{margin-inline-start:auto;visibility:hidden}
-.navigation-borders[aria-pressed=true] .navigation-check{visibility:visible}
 .navigation-options{font-size:.82rem;line-height:1.6;padding:9px 2px 0}
 .navigation-options label{display:flex;gap:8px;align-items:center;min-height:44px;cursor:pointer}
 .navigation-options input{width:18px;height:18px;accent-color:var(--ink)}
@@ -20,11 +17,11 @@
 .navigation-line.disputed{border-top-style:dashed}
 .navigation-status{font-size:.82rem;line-height:1.5;margin-top:8px}
 .navigation-status button{font-size:inherit;display:block;margin-top:7px}
-.navigation-controls [hidden]{display:none!important}
-.atlas-ui #desertBelt{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;background:#fff;color:#244c43;border:1px solid #d4e1d6;min-height:46px;margin-top:9px;transition:none}
-.atlas-ui #desertBelt:after{content:'';flex:none;width:34px;height:20px;border-radius:20px;background:#b7c5bc;box-shadow:inset -15px 0 0 -3px #fff;border:2px solid #b7c5bc}
-.atlas-ui #desertBelt[aria-pressed=true]{border-color:#5b8c71;background:#eef5ef}
-.atlas-ui #desertBelt[aria-pressed=true]:after{background:#367255;border-color:#367255;box-shadow:inset 15px 0 0 -3px #fff}
+.navigation-controls [hidden],.navigation-overlay [hidden]{display:none!important}
+.atlas-ui :is(#desertBelt,#bordersToggle){width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;background:#fff;color:#244c43;border:1px solid #d4e1d6;min-height:46px;margin-top:9px;transition:none}
+.atlas-ui :is(#desertBelt,#bordersToggle):after{content:'';flex:none;width:34px;height:20px;border-radius:20px;background:#b7c5bc;box-shadow:inset -15px 0 0 -3px #fff;border:2px solid #b7c5bc}
+.atlas-ui :is(#desertBelt,#bordersToggle)[aria-pressed=true]{border-color:#5b8c71;background:#eef5ef}
+.atlas-ui :is(#desertBelt,#bordersToggle)[aria-pressed=true]:after{background:#367255;border-color:#367255;box-shadow:inset 15px 0 0 -3px #fff}
 .desert-map-key{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #e7ede8;background:#fff;font-size:.75rem;color:#4b3a22}
 .desert-map-key[hidden]{display:none!important}
 .desert-swatch{flex:none;width:26px;height:16px;border:1px solid #64410c;border-radius:2px;background:repeating-linear-gradient(135deg,#7d4e0e 0 2px,transparent 2px 8px)}
