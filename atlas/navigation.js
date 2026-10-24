@@ -20,7 +20,7 @@
    <label><input id="countryNames" type="checkbox" checked>שמות מדינות בהגדלה</label>
    <p><span class="navigation-line"></span>גבול יבשתי <span class="navigation-line disputed"></span>קו מחלוקת או הפסקת אש</p>
    <p>השמות מופיעים לפי המקום הפנוי, מהגדלה של 220%. קווי החוף מוצגים במפה הקיימת.</p>
-   <details><summary>מקור הגבולות</summary><p>Natural Earth, קנה מידה 1:50 מיליון. זהו מידע מוכלל לפי מדיניות המקור, אינו מפת גבולות משפטית או עדכון בזמן אמת. קווי מחלוקת מסומנים בקו מקווקו.</p><p><a href="https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-boundary-lines-2/" target="_blank" rel="noopener">נתוני הגבולות</a> · <a href="https://www.naturalearthdata.com/about/disputed-boundaries-policy/" target="_blank" rel="noopener">מדיניות התיחום</a> · <a href="data/boundaries/countries.json" target="_blank" rel="noopener">פרטי הנתונים והגרסה</a></p></details>
+   <details><summary>מקור הגבולות</summary><p>Natural Earth, קנה מידה 1:50 מיליון. בתצוגת מפה זו בוצעה התאמה מקומית של קווים ושמות באזור ישראל. זהו מידע מוכלל לפי מדיניות המקור, אינו מפת גבולות משפטית או עדכון בזמן אמת. קווי מחלוקת מסומנים בקו מקווקו.</p><p><a href="https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-boundary-lines-2/" target="_blank" rel="noopener">נתוני הגבולות</a> · <a href="https://www.naturalearthdata.com/about/disputed-boundaries-policy/" target="_blank" rel="noopener">מדיניות התיחום</a> · <a href="data/boundaries/countries.json" target="_blank" rel="noopener">פרטי הנתונים והגרסה</a></p></details>
   </div>`;
  q('#dockLayers .display-settings').before(controls);
  const borderControls=document.createElement('div');borderControls.id='bordersControl';borderControls.className='navigation-overlay';
@@ -49,6 +49,11 @@
    const value=await response.json();
    if(value.type!=='FeatureCollection'||!Array.isArray(value.features)||!value.features.length||!Array.isArray(value.labels))throw Error('Invalid boundary data');
    for(const f of value.features)if(!['LineString','MultiLineString'].includes(f.geometry?.type)||!['boundary','disputed','other'].includes(f.properties?.kind))throw Error('Invalid boundary feature');
+   // Display-only customization: Gaza/West Bank internal lines and the
+   // western Golan claim line. Keep all surrounding outer boundary segments.
+   const omittedLines=new Set(['land:1746705323','land:1746709121','disputed:1746705871']);
+   value.features=value.features.filter(f=>!omittedLines.has(f.properties.sourceLayer+':'+f.properties.id));
+   value.labels=value.labels.filter(p=>p.code!=='PS');
    let display=null;try{display=new Intl.DisplayNames(['he'],{type:'region'});}catch{}
    value.labels=value.labels.map(p=>({...p,name:display&&/^[A-Z]{2}$/.test(p.code)?display.of(p.code)||p.name:p.name}));
    data=value;
@@ -103,14 +108,14 @@
  const overlaps=(a,b)=>a[0]<b[2]&&a[2]>b[0]&&a[1]<b[3]&&a[3]>b[1];
  function drawNames(){
   labelBoxes=[];if(!settings.borders||!settings.names||!data||state.zoom<2.2)return;
-  ctx.save();const fontSize=document.body.classList.contains('large')?14:12;
+  ctx.save();const fontSize=12*atlasTextScale();
   ctx.font='600 '+fontSize/view.s+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';ctx.lineJoin='round';
   const taken=[];
   // Reserve existing continent captions and the visible latitude edge labels.
   if(state.labels)for(const [lon,lat] of [[-104,47],[-60,-16],[20,51],[21,4],[92,44],[135,-26],[0,-80]]){
    const p=projection([lon,lat]),x=p[0]*view.s+view.x,y=p[1]*view.s+view.y;taken.push([x-58,y-11,x+58,y+11]);
   }
-  if(state.latitudes)for(const line of latitudeLines){const y=projection([0,line.lat])[1]*view.s+view.y;if(y<48||y>cssH-30)continue;const width=cssW<600?150:205;taken.push([0,y-15,width,y+15],[cssW-width,y-15,cssW,y+15]);}
+  if(state.latitudes)for(const line of latitudeLines){const y=projection([0,line.lat])[1]*view.s+view.y;if(y<48||y>cssH-30)continue;const width=(cssW<600?150:205)*atlasTextScale();const bottom=y+(line.subtitle?34:15)*atlasTextScale();taken.push([0,y-15,width,bottom],[cssW-width,y-15,cssW,bottom]);}
   for(const label of data.labels){
    if(!label.name||!Number.isFinite(label.lon)||!Number.isFinite(label.lat))continue;
    const p=projection([label.lon,label.lat]);if(!p)continue;

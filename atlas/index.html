@@ -9,7 +9,7 @@ footer a{color:inherit}.subtitle{overflow-wrap:anywhere}.legend-items .legend-bt
 .learning-note{font-size:.78em;line-height:1.6;padding:10px 12px;background:#f1f5ef;border-radius:8px;color:#385c54}.legend-btn{overflow-wrap:anywhere;align-items:flex-start}.legend-btn .swatch{margin-top:2px}.map-head h2{line-height:1.5}.tooltip{max-width:min(420px,85vw);white-space:normal}.filter-label select{max-width:260px}.legend-items{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:800px){.legend-items{grid-template-columns:repeat(2,minmax(0,1fr))}.map-head h2{font-size:1rem}.filter-label select{max-width:220px}}
 .creator-credit{flex-basis:100%;text-align:center;font-size:.72rem;margin-top:6px}footer{flex-wrap:wrap}
 .latitude-labels{position:absolute;inset:0;pointer-events:none;z-index:2;direction:rtl}.latitude-label{position:absolute;transform:translateY(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;padding:3px 5px;border:1.5px solid #194e70;border-radius:5px;background:rgba(255,255,255,.96);color:#092f4c;font-weight:700;line-height:1.2;box-shadow:0 1px 4px #092f4c24}.equator-label{border-width:2px}.latitude-label bdi{font-weight:800}.map-tools,.map-options{z-index:3}
-</style><link rel="stylesheet" href="layers.css?v=20261023-2"><link rel="stylesheet" href="interface.css?v=20261023-4"><link rel="stylesheet" href="learning-layers.css?v=20261024-1"><link rel="stylesheet" href="navigation.css?v=20261024-4"><link rel="stylesheet" href="cities.css?v=20261024-2"></head>
+</style><link rel="stylesheet" href="layers.css?v=20261023-2"><link rel="stylesheet" href="interface.css?v=20261024-6"><link rel="stylesheet" href="learning-layers.css?v=20261024-1"><link rel="stylesheet" href="navigation.css?v=20261024-6"><link rel="stylesheet" href="cities.css?v=20261024-2"></head>
 <body>
 <a class="skip" href="#workspace">דילוג אל המפה</a>
 <header class="masthead"><div class="brand"><span class="brand-mark" aria-hidden="true">◎</span><div><span class="eyebrow">גיאוגרפיה · דרך המפה</span><h1>אטלס האקלים<span class="title-dot">.</span></h1></div></div><div class="header-actions"><button id="fontSize" aria-pressed="false" title="הגדלת הטקסט">A<span class="small-a">a</span></button><button id="project" aria-pressed="false">מצב הקרנה</button><button id="sources">מקורות ומידע ⓘ</button></div></header>
@@ -173,11 +173,12 @@ function colored(ids){
  if(overlayCache.size>12){const first=overlayCache.keys().next().value;overlayCache.delete(first);}
  return out;
 }
+function atlasTextScale(){return document.body.classList.contains('large')?1.4:1;}
 const latitudeLines=[
  {lat:66.5,name:'חוג הקוטב הצפוני',short:'החוג הארקטי',degrees:'66.5°',direction:'צפון'},
- {lat:23.5,name:'חוג הסרטן',short:'חוג הסרטן',degrees:'23.5°',direction:'צפון'},
+ {lat:23.5,name:'חוג הסרטן',short:'חוג הסרטן',degrees:'23.5°',direction:'צפון',subtitle:'קו ההיפוך הצפוני'},
  {lat:0,name:'קו המשווה',short:'קו המשווה',degrees:'0°',direction:''},
- {lat:-23.5,name:'חוג הגדי',short:'חוג הגדי',degrees:'23.5°',direction:'דרום'},
+ {lat:-23.5,name:'חוג הגדי',short:'חוג הגדי',degrees:'23.5°',direction:'דרום',subtitle:'קו ההיפוך הדרומי'},
  {lat:-66.5,name:'חוג הקוטב הדרומי',short:'החוג האנטארקטי',degrees:'66.5°',direction:'דרום'}
 ];
 function renderLatitudeLabels(){
@@ -189,7 +190,7 @@ function renderLatitudeLabels(){
   const yy=view.y+projection([0,line.lat])[1]*view.s;
   if(yy<48||yy>cssH-30)return [];
   const text='<span>'+ (cssW<600?line.short:line.name)+'</span><bdi dir="ltr">'+line.degrees+'</bdi>'+(line.direction?'<span>'+line.direction+'</span>':'');
-  return ['left','right'].map(side=>'<div class="latitude-label '+(line.lat===0?'equator-label':'')+'" style="'+side+':6px;top:'+yy+'px">'+text+'</div>');
+  return ['left','right'].map(side=>'<div class="latitude-label '+(line.lat===0?'equator-label':'')+(line.subtitle?' has-subtitle':'')+'" style="'+side+':6px;top:'+yy+'px">'+(line.subtitle?'<span class="latitude-main">'+text+'</span><small class="latitude-subtitle">'+line.subtitle+'</small>':text)+'</div>');
  }).join('');
 }
 function draw(){
@@ -227,7 +228,7 @@ function draw(){
  }
  ctx.beginPath();path(coast);ctx.strokeStyle='#365d5c80';ctx.lineWidth=.6/s;ctx.stroke();
  if(state.labels){
-  ctx.font='600 '+(Math.max(10,cssW/105)/s)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#20484a';ctx.strokeStyle='#ffffffdc';ctx.lineWidth=3/s;ctx.lineJoin='round';
+  ctx.font='600 '+(Math.max(10,cssW/105)*atlasTextScale()/s)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#20484a';ctx.strokeStyle='#ffffffdc';ctx.lineWidth=3/s;ctx.lineJoin='round';
   [['אמריקה הצפונית',-104,47],['אמריקה הדרומית',-60,-16],['אירופה',20,51],['אפריקה',21,4],['אסיה',92,44],['אוסטרליה',135,-26],['אנטארקטיקה',0,-80]].forEach(([name,lon,lat])=>{const p=projection([lon,lat]);ctx.strokeText(name,...p);ctx.fillText(name,...p);});
  }
  window.atlasNavigation?.drawNames();
@@ -260,7 +261,7 @@ $('#zoomIn').onclick=()=>zoom(1.3);$('#zoomOut').onclick=()=>zoom(1/1.3);$('#res
 $('#showLabels').onclick=()=>{state.labels=!state.labels;render();};$('#latitudes').onclick=()=>{state.latitudes=!state.latitudes;render();};
 $('#groupFilter').onchange=e=>{state.group=e.target.value;renderLegend();};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.tour=-1;if(state.tab==='inquiry')state.view='detail';if(state.tab==='compare'&&!activeItems().some(r=>r.id===state.a)){state.a=activeItems()[0].id;state.b=activeItems()[1].id;}render();});
-$('#fontSize').onclick=()=>{const v=document.body.classList.toggle('large');$('#fontSize').setAttribute('aria-pressed',v);};
+$('#fontSize').onclick=()=>{const v=document.body.classList.toggle('large');$('#fontSize').setAttribute('aria-pressed',v);render();requestAnimationFrame(draw);};
 $('#project').onclick=()=>{const v=document.body.classList.toggle('projection');$('#project').setAttribute('aria-pressed',v);};
 $('#sources').onclick=()=>$('#sourceDialog').showModal();$('#closeSources').onclick=()=>$('#sourceDialog').close();
 $('#sourceDialog').onclick=e=>{if(e.target===$('#sourceDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}};
@@ -294,4 +295,4 @@ OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
---><script src="interface.js?v=20261024-1"></script><script src="solar-model.js?v=20261024-1"></script><script src="atmosphere-model.js?v=20261024-1"></script><script src="learning-layers.js?v=20261024-1"></script><script src="navigation.js?v=20261024-5"></script><script src="cities.js?v=20261024-1"></script></body></html>
+--><script src="interface.js?v=20261024-6"></script><script src="solar-model.js?v=20261024-1"></script><script src="atmosphere-model.js?v=20261024-1"></script><script src="learning-layers.js?v=20261024-6"></script><script src="navigation.js?v=20261024-6"></script><script src="cities.js?v=20261024-6"></script></body></html>

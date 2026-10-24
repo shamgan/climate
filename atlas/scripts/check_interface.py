@@ -26,7 +26,24 @@ with sync_playwright() as p:
     def shot(name): page.screenshot(path=str(root/(name+'.png')),full_page=True)
     assert page.locator('.latitude-label').count()==10
     assert page.locator('#mapStage button').count()==0
-    assert page.locator('#mapStage').bounding_box()['y']<200
+    normal_size=page.locator('#currentsToggle').evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')
+    normal_lat=page.locator('.latitude-main').first.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')
+    def continent_font():
+        return page.evaluate('''()=>{
+          const fonts=[],old=ctx.fillText;ctx.fillText=function(t,...args){fonts.push(parseFloat(this.font.match(/[\\d.]+(?=px)/)[0])*view.s);return old.call(this,t,...args)};
+          try{draw()}finally{ctx.fillText=old}return Math.max(...fonts);
+        }''')
+    normal_canvas=continent_font()
+    click('#fontSize')
+    assert page.locator('#currentsToggle').evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=normal_size*1.35
+    assert page.locator('.latitude-main').first.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=normal_lat*1.35
+    assert continent_font()>=normal_canvas*1.30
+    assert page.evaluate('document.scrollingElement.scrollHeight<=innerHeight+1 && document.scrollingElement.scrollWidth<=innerWidth')
+    click('#fontSize')
+    assert page.locator('#mapStage').bounding_box()['y']<=1
+    assert not page.locator('.masthead,.header-menu').count()
+    assert page.locator('#mapDrawer .drawer-brand h1').count()==1
+    assert page.locator('.drawer-bottom #sources').count()==1 and page.locator('.drawer-bottom #fontSize').count()==1
     shot('ui-desktop')
     width=page.locator('#mapStage').bounding_box()['width']
     click('#closeDrawer');assert page.locator('#mapStage').bounding_box()['width']>width+250
@@ -74,6 +91,18 @@ with sync_playwright() as p:
             value=struct.unpack_from('<H',raw,2*(row*1440+col))[0]/10+layer['offset']
             expected=f'{value:.1f}' if key=='temperature' else str(round(value))
             assert expected in readout,(key,month,expected)
+    # The large mode also redraws the existing SVG climograph, without clipping.
+    svg_normal=page.locator('#cityCard svg g').get_attribute('font-size')
+    click('#fontSize')
+    assert float(page.locator('#cityCard svg g').get_attribute('font-size'))>=float(svg_normal)*1.35
+    for i in range(20):
+        page.locator('#sampleLocation').select_option(str(i))
+        assert page.locator('#cityCard svg').evaluate('''svg=>{
+          const b=svg.viewBox.baseVal;
+          return [...svg.querySelectorAll('text')].every(t=>{const r=t.getBBox();return r.x>=-1&&r.y>=-1&&r.x+r.width<=b.width+1&&r.y+r.height<=b.height+1});
+        }''')
+    shot('fullscreen-large-city')
+    click('#fontSize')
     dock('layers');click('#currentsToggle');settings();click('#showLabels');info();shot('temperature-desktop')
     click('#zoomIn');click('#zoomIn');shot('temperature-zoom');click('#resetView')
     ticks=page.locator('#compactLegend .field-ticks').inner_text()
@@ -89,7 +118,8 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390,'height':844})
     page.wait_for_function('!document.querySelector("#mapDrawer").open')
     assert page.locator('#mapStage').bounding_box()['y']<200
-    assert page.locator('#mapStage').bounding_box()['height']<320
+    assert page.locator('#mapStage').bounding_box()['height']>400
+    assert page.evaluate('document.scrollingElement.scrollHeight<=innerHeight+1')
     assert page.locator('.latitude-label').count()==10
     shot('ui-mobile');dock('layers')
     assert page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')")
@@ -103,8 +133,8 @@ with sync_playwright() as p:
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     settings();click('#latitudes');assert not page.locator('#latitudeLabels').is_visible()
     click('#latitudes');assert page.locator('#latitudeLabels').is_visible();click('#applyDrawer')
-    click('.header-menu summary');click('#fontSize');assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-    click('.header-menu summary');click('#sources');assert page.locator('#sourceDialog').is_visible();click('#closeSources')
+    dock('layers');click('#fontSize');assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    dock('layers');click('#sources');assert page.locator('#sourceDialog').is_visible();click('#closeSources')
     retry=browser.new_page();retry.on('pageerror',lambda e:errors.append(str(e)))
     retry.route('**/data/era5/manifest.json*',lambda route:route.fulfill(status=503,body='unavailable'))
     retry.goto(url);retry.wait_for_function('ready && window.atlasInterface')
@@ -123,13 +153,16 @@ with sync_playwright() as p:
             frame=page.locator('.map-section').bounding_box()
             stage=page.locator('#mapStage').bounding_box()
             canvas=page.locator('#map').bounding_box()
-            assert abs(stage['x']-frame['x']-1)<=1,(width,height,closed,'left strip',stage,frame)
-            assert abs(stage['width']-frame['width']+2)<=1,(width,height,closed,'unused width',stage,frame)
+            assert abs(stage['x']-frame['x'])<=1,(width,height,closed,'left strip',stage,frame)
+            assert abs(stage['width']-frame['width'])<=1,(width,height,closed,'unused width',stage,frame)
             assert abs(canvas['width']-stage['width'])<=1
             assert page.locator('.latitude-label').count()==10
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            assert page.evaluate('document.scrollingElement.scrollHeight<=innerHeight+1')
+            assert stage['y']<=1 and canvas['y']<=1
+            page.evaluate('window.scrollTo(0,1000)');assert page.evaluate('scrollY')==0
             if width==1280 and height==720 and closed: shot('width-fixed-desktop')
-    print('WIDTH_CHECKS_PASSED: 7 screen sizes, drawer open/closed, full frame width, symmetric borders, all latitude labels, no horizontal overflow')
+    print('WIDTH_CHECKS_PASSED: 7 screen sizes, drawer open/closed, full frame width, symmetric borders, all latitude labels, no document scroll, top-aligned full viewport map')
     assert not errors,errors
     print('BROWSER_CHECKS_PASSED: map-first desktop/mobile layout; no controls over canvas; drawer, keyboard tabs, Escape, modal focus; climate legends, comparison, inquiry; actual ERA5 values; 29 currents; months, zoom, labels, font size, sources, retry; no runtime errors')
     browser.close()

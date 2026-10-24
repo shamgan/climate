@@ -30,18 +30,18 @@
   sync();return pending;
  }
  function chart(city,prefix){
-  const w=360,h=300,left=47,right=47,top=30,bottom=43,pw=w-left-right,ph=h-top-bottom;
+  const scale=atlasTextScale(),large=scale>1,w=360,h=large?340:300,left=47,right=47,top=large?44:30,bottom=large?69:43,pw=w-left-right,ph=h-top-bottom;
   const minT=Math.min(0,Math.floor((Math.min(...city.temperature)-2)/10)*10),maxT=Math.max(30,Math.ceil((Math.max(...city.temperature)+2)/10)*10);
   const maxP=Math.max(...city.precipitation),stepP=maxP<=10?2:maxP<=40?10:maxP<=100?25:maxP<=200?50:maxP<=400?100:200,pMax=Math.max(stepP*4,Math.ceil(maxP/stepP)*stepP);
   const yP=v=>top+ph-v/pMax*ph,yT=v=>top+ph-(v-minT)/(maxT-minT)*ph,x=i=>left+(i+.5)*pw/12;
   let svg='<svg class="city-graph" viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" role="group" aria-labelledby="'+prefix+'Title '+prefix+'Desc"><title id="'+prefix+'Title">קלימוגרף '+escape(city.name)+'</title><desc id="'+prefix+'Desc">ממוצעי 1991 עד 2020. חודשים מינואר עד דצמבר, משמאל לימין. עמודות כחולות מציגות משקעים במילימטרים, קו אדום מציג טמפרטורה במעלות צלזיוס. הצירים מותאמים לעיר.</desc><rect x="'+left+'" y="'+top+'" width="'+pw+'" height="'+ph+'" fill="#fff"/>';
-  svg+='<g font-family="Arial,sans-serif" font-size="14"><text x="'+left+'" y="17" text-anchor="middle" fill="#1b6c9b">mm</text><text x="'+(w-right)+'" y="17" text-anchor="middle" fill="#b02730">°C</text>';
+  svg+='<g font-family="Arial,sans-serif" font-size="'+14*scale+'"><text x="'+left+'" y="'+(large?23:17)+'" text-anchor="middle" fill="#1b6c9b">mm</text><text x="'+(w-right)+'" y="'+(large?23:17)+'" text-anchor="middle" fill="#b02730">°C</text>';
   for(let v=0;v<=pMax;v+=stepP){const y=yP(v);svg+='<path d="M'+left+' '+y+'H'+(w-right)+'" stroke="#dfe7e1" stroke-width="1"/><text x="'+(left-7)+'" y="'+(y+4)+'" text-anchor="end" fill="#1b6c9b">'+v+'</text>';}
   for(let v=minT;v<=maxT;v+=10){const y=yT(v);svg+='<path d="M'+(w-right)+' '+y+'h4" stroke="#b02730"/><text x="'+(w-right+7)+'" y="'+(y+4)+'" text-anchor="start" fill="#b02730">'+v+'</text>';}
   for(let i=0;i<12;i++){const p=city.precipitation[i],y=yP(p);svg+='<rect data-rain-month="'+(i+1)+'" x="'+(x(i)-pw/12*.34)+'" y="'+y+'" width="'+(pw/12*.68)+'" height="'+Math.max(0,top+ph-y)+'" rx="1" fill="#247caf"/><text x="'+x(i)+'" y="'+(top+ph+20)+'" text-anchor="middle" fill="#334e51">'+(i+1)+'</text>';}
   svg+='<path d="'+city.temperature.map((v,i)=>(i?'L':'M')+x(i)+' '+yT(v)).join(' ')+'" stroke="#c52f36" stroke-width="3" stroke-linejoin="round" fill="none"/>';
   for(let i=0;i<12;i++)svg+='<circle data-temperature-month="'+(i+1)+'" cx="'+x(i)+'" cy="'+yT(city.temperature[i])+'" r="3" fill="#c52f36" stroke="#fff" stroke-width="1"/>';
-  svg+='<path d="M'+left+' '+top+'V'+(top+ph)+'H'+(w-right)+'V'+top+'" stroke="#7c9591" fill="none"/><text x="180" y="296" text-anchor="middle" fill="#536c6c" direction="rtl">חודש בשנה: 1 = ינואר, 12 = דצמבר</text>';
+  svg+='<path d="M'+left+' '+top+'V'+(top+ph)+'H'+(w-right)+'V'+top+'" stroke="#7c9591" fill="none"/><text x="'+w/2+'" y="'+(large?h-10:h-4)+'" text-anchor="middle" fill="#536c6c" direction="rtl">חודש בשנה: 1 = ינואר, 12 = דצמבר</text>';
   for(let i=0;i<12;i++)svg+='<rect class="city-month-target" data-city-month="'+i+'" x="'+(left+i*pw/12)+'" y="'+top+'" width="'+pw/12+'" height="'+ph+'" fill="transparent" tabindex="0" role="button" aria-label="'+months[i]+': '+fmt(city.temperature[i])+' מעלות צלזיוס, '+fmt(city.precipitation[i])+' מילימטר משקעים"/>';
   return svg+'</g></svg>';
  }

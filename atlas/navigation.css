@@ -25,3 +25,6 @@
 .desert-map-key{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #e7ede8;background:#fff;font-size:.75rem;color:#76004c}
 .desert-map-key[hidden]{display:none!important}
 .desert-swatch{flex:none;width:26px;height:16px;border:1px solid #76004c;border-radius:2px;background:rgba(224,0,156,.745)}
+.latitude-label.has-subtitle{flex-direction:column;gap:2px;transform:translateY(calc(-.6em - 4.5px))}
+.latitude-main{display:flex;align-items:center;gap:4px}
+.latitude-subtitle{display:block;font-size:.8em;font-weight:500;line-height:1.2}

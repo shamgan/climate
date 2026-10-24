@@ -130,7 +130,7 @@
  }
  function pathLine(points,color,width=2,dash=[]){const s=view.s;ctx.save();ctx.beginPath();d3.geoPath(projection,ctx)({type:'LineString',coordinates:points});ctx.setLineDash(dash.map(x=>x/s));ctx.strokeStyle='#ffffffe0';ctx.lineWidth=(width+2.5)/s;ctx.stroke();ctx.strokeStyle=color;ctx.lineWidth=width/s;ctx.stroke();ctx.restore();}
  const latitude=lat=>Array.from({length:181},(_,i)=>[-180+i*2,lat]);
- function symbol(text,lon,lat,color,size=15){const p=projection([lon,lat]);ctx.save();ctx.font='700 '+size/view.s+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3.5/view.s;ctx.strokeStyle='#ffffffed';ctx.strokeText(text,...p);ctx.fillStyle=color;ctx.fillText(text,...p);ctx.restore();}
+ function symbol(text,lon,lat,color,size=15){const p=projection([lon,lat]);ctx.save();ctx.font='700 '+size*atlasTextScale()/view.s+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3.5/view.s;ctx.strokeStyle='#ffffffed';ctx.strokeText(text,...p);ctx.fillStyle=color;ctx.fillText(text,...p);ctx.restore();}
  function drawAtmosphere(){
   if(!settings.atmosphere)return;
   const A=AtlasAtmosphere,m=month(),s=view.s,spacing=cssW<600?65:42;
@@ -191,14 +191,14 @@
   drawScenes();
  }
  function sceneBase(c,w,h){const sky=c.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#b9d9e8');sky.addColorStop(.75,'#f2f5e8');sky.addColorStop(1,'#d4ddc2');c.fillStyle=sky;c.fillRect(0,0,w,h);}
- function text(c,str,x,y,size=20,color='#20484a'){c.font='600 '+size+'px Arial';c.textAlign='center';c.fillStyle=color;c.fillText(str,x,y);}
+ function text(c,str,x,y,size=20,color='#20484a'){c.font='600 '+size*atlasTextScale()+'px Arial';c.textAlign='center';c.fillStyle=color;c.fillText(str,x,y);}
  function cloud(c,x,y,alpha=1){c.save();c.globalAlpha=alpha;c.fillStyle='#faffff';c.shadowColor='#3c647a55';c.shadowBlur=12;for(const [dx,dy,r] of [[-32,4,21],[-10,-8,29],[19,-5,25],[40,8,18]]){c.beginPath();c.arc(x+dx,y+dy,r,0,Math.PI*2);c.fill();}c.restore();}
  function arrow(c,x,y,angle,len,color='#e5a34e'){c.save();c.translate(x,y);c.rotate(angle);c.strokeStyle=color;c.fillStyle=color;c.lineWidth=6;c.lineCap='round';c.beginPath();c.moveTo(-len/2,0);c.lineTo(len/2,0);c.stroke();c.beginPath();c.moveTo(len/2,0);c.lineTo(len/2-14,-9);c.lineTo(len/2-14,9);c.closePath();c.fill();c.restore();}
  function pressureScene(){const cv=q('#pressureScene'),c=cv.getContext('2d'),w=cv.width,h=cv.height,z=zoneText[AtlasAtmosphere.zone(...settings.point,month())];sceneBase(c,w,h);c.fillStyle='#9cbb87';c.beginPath();c.moveTo(0,300);for(let x=0;x<=w;x+=8)c.lineTo(x,302+Math.sin(x/110)*5);c.lineTo(w,h);c.lineTo(0,h);c.fill();text(c,'חתך עקרוני באטמוספרה',w/2,32,21);
   if(z[2]==='horizontal'){arrow(c,300,190,0,180,'#755292');text(c,'רוח סמוך לפני השטח',300,250,22);text(c,'החץ בחתך מסמל תנועה אופקית בלבד',300,280,16);return;}
   const rising=z[2]==='up';for(let i=0;i<3;i++){const y=255-i*70,r=18+i*9;const g=c.createRadialGradient(220-r/3,y-r/3,2,220,y,r);g.addColorStop(0,'#fff5c6cc');g.addColorStop(1,'#d58b4099');c.fillStyle=g;c.beginPath();c.arc(220,y,r,0,Math.PI*2);c.fill();}
   arrow(c,350,195,rising?-Math.PI/2:Math.PI/2,145);if(rising)cloud(c,220,84,.95);
-  text(c,rising?'עלייה והתפשטות':'ירידה ודחיסה',440,135,19);text(c,rising?'התקררות':'התחממות',440,170,19);text(c,rising?'ענן עשוי להיווצר':'הלחות היחסית פוחתת',420,230,18);text(c,'גודל חבילות האוויר מוגזם להמחשה',300,340,16);
+  text(c,rising?'עלייה והתפשטות':'ירידה ודחיסה',atlasTextScale()>1?460:440,135,19);text(c,rising?'התקררות':'התחממות',atlasTextScale()>1?460:440,170,19);text(c,rising?'ענן עשוי להיווצר':'הלחות היחסית פוחתת',atlasTextScale()>1?460:420,230,18);text(c,'גודל חבילות האוויר מוגזם להמחשה',300,340,16);
  }
  function mountainY(x){return 313-139*Math.exp(-Math.pow((x-320)/115,2))-34*Math.exp(-Math.pow((x-243)/42,2))+8*Math.sin(x/19)*Math.exp(-Math.pow((x-310)/150,2));}
  function parcelPosition(t){const x=50+500*t;return [x,mountainY(x)-48];}

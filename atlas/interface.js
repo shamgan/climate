@@ -39,19 +39,32 @@
  q('.layer-controls').remove();
  q('.intro').remove();
  const head=q('.map-head');head.querySelector('.eyebrow').textContent='מבט על העולם';
- const open=make('button','drawer-toggle','<span aria-hidden="true">☷</span> שכבות ומקרא');open.id='openDrawer';open.setAttribute('aria-controls','mapDrawer');open.setAttribute('aria-expanded','false');head.append(open);
- head.after(status);
+ const open=make('button','drawer-toggle','<span aria-hidden="true">☷</span> כלי המפה');open.id='openDrawer';open.setAttribute('aria-controls','mapDrawer');open.setAttribute('aria-expanded','false');
+ // Keep the canvas at the top edge; its changing title and loading messages
+ // belong to the tool dock rather than a second page header.
+ q('.drawer-scroll').prepend(head,status);
  const foot=q('.map-foot');
  foot.querySelector(':scope > span:last-child')?.remove();
  const tools=q('.map-tools');foot.append(tools);
  q('#resetView').textContent='איפוס';q('#resetView').title='חזרה למפת העולם';
  q('#zoomIn').title='הגדלה';q('#zoomOut').title='הקטנה';
- const note=q('#mapNote');note.className='map-guidance';foot.firstElementChild.after(note);
- const key=make('div','map-key','<div id="compactLegend"></div><button id="openLegend" class="key-link">מקרא מלא ←</button>');mapSection.append(key);
+ const note=q('#mapNote');note.className='map-guidance';head.querySelector('div').append(note);
+ foot.prepend(open);
+ const summary=make('div','map-summary');summary.setAttribute('aria-label','מקרא השכבות המוצגות');mapSection.append(summary);
+ const key=make('div','map-key','<div id="compactLegend"></div><button id="openLegend" class="key-link">מקרא מלא ←</button>');summary.append(key);
+ // Later modules add their own legends without needing to know this layout.
+ const gatherLegends=()=>{mapSection.querySelectorAll(':scope > .learning-key,:scope > .desert-map-key,:scope > .compact-currents').forEach(n=>summary.append(n));};
+ new MutationObserver(gatherLegends).observe(mapSection,{childList:true});
  const readoutButton=make('button','selection-info','מידע על הבחירה ←');readoutButton.id='openInfo';foot.prepend(readoutButton);
- const options=make('details','header-menu','<summary>אפשרויות <span aria-hidden="true">⌄</span></summary><div class="header-menu-items"></div>');
- const actions=q('.header-actions');options.querySelector('div').append(...actions.children);actions.append(options);
+ const masthead=q('.masthead'),brand=q('.brand'),actions=q('.header-actions');
+ brand.classList.add('drawer-brand');drawer.prepend(brand);
+ const bottom=q('.drawer-bottom');actions.classList.add('drawer-actions');
+ actions.append(q('#sources'),q('#fontSize'),q('#project'));bottom.prepend(actions);
+ const credit=q('.creator-credit');if(credit)bottom.append(credit);
+ q('body > footer')?.remove();masthead.remove();
  q('#sources').textContent='מקורות ומידע';
+ q('#fontSize').innerHTML='<span class="font-icon" aria-hidden="true">A<span class="small-a">a</span></span><span>הגדלת טקסט</span>';
+ q('#fontSize').setAttribute('aria-label','הגדלת הטקסט בממשק ובמפה');
  let dock='layers',info='data',lastSelection=0,lastCurrent='',lastPoint=null;
  let focusReturn=null;
  function showTab(name,focus=false){
@@ -116,8 +129,6 @@
  drawer.addEventListener('click',e=>{if(e.target===drawer&&narrow.matches){const r=drawer.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDrawer();}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer.open&&!narrow.matches&&!q('#sourceDialog').open){e.preventDefault();closeDrawer();}});
  document.addEventListener('click',e=>{
-  if(!options.contains(e.target))options.open=false;
-  if(e.target.closest('.header-menu-items button'))options.open=false;
   const chip=e.target.closest('[data-key-region]');if(chip){select(Number(chip.dataset.keyRegion));showInfo();}
  });
  q('#legendItems').addEventListener('click',e=>{if(e.target.closest('[data-region]'))queueMicrotask(()=>showInfo());},true);
