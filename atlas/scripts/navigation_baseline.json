@@ -1,0 +1,32 @@
+{
+  "commit": "6fcabcbcc42a88d9c07edd23b96ccd4581e6dfc8",
+  "htmlBlob": "824848d13da4694b0a55b389f8ef3f64bd1df145",
+  "htmlAdditions": [
+    "<link rel=\"stylesheet\" href=\"navigation.css?v=20261024-1\">",
+    " window.atlasNavigation?.drawDesert();\n",
+    " window.atlasNavigation?.drawBorders();\n",
+    " window.atlasNavigation?.drawNames();\n",
+    " window.atlasNavigation?.sync();\n",
+    "<script src=\"navigation.js?v=20261024-1\"></script>"
+  ],
+  "assets": {
+    "atmosphere-model.js": "6bf3d5e5c3e4986626a91764fded5d81fc75f2a3",
+    "currents.js": "f1aa87d81cd8fa8a9f1361cde68af62cf95369ce",
+    "data/climatology.json": "fc326d13f236b718b7e5f2f8ecd75046c374c20c",
+    "data/era5/manifest.json": "ec60e235304477f24a2386d379f94987300d2caa",
+    "data/era5/precipitation-01.bin.gz": "4e437d52ef2250d86ed7028de266264ae7ff060e",
+    "data/era5/precipitation-07.bin.gz": "cc911ad0c0473b849368886d8bf39bfed5547555",
+    "data/era5/temperature-01.bin.gz": "7e1065e6a47953b9a6ac872e4e53abfb75015dc4",
+    "data/era5/temperature-07.bin.gz": "404e668939526521ee0cd45b1ffcbfdbde6e93af",
+    "data/terrain/elevation-01deg.bin.gz": "999e1dff1eb0612519a8afb8ae6ce2322a25a67b",
+    "data/terrain/manifest.json": "98f3a08b2a82bb16991ab709b8cacabf06f12675",
+    "data/terrain/preview-1deg.bin.gz": "af52931ea8feea9fcc00126b0a96a685402b041f",
+    "interface.css": "e2902ee23222f30770d93284d5bab36f159ae2f4",
+    "interface.js": "932874c3cdd87eee3dc203742ba2447a74b7c9c5",
+    "layers.css": "3fec97a96d72643bfe40a35f4bf7ed5689f012db",
+    "layers.js": "936b564d2111997c10495befbba1417796c53389",
+    "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
+    "learning-layers.js": "547ca81f5af72f0cc90753ace60a016a566942ca",
+    "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
+  }
+}
