@@ -44,6 +44,7 @@ with sync_playwright() as p:
     def click(s):
         if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
         page.locator(s).click()
+        page.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))')
         if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def tab(name):
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')
@@ -51,6 +52,10 @@ with sync_playwright() as p:
     def shot(name):page.wait_for_timeout(180);page.screenshot(path=str(root/(name+'.png')),full_page=True)
     def marker_check(city):
         assert page.locator('#cityMarker').is_visible()
+        # Drawer/footer changes schedule a shared camera redraw on animation frame.
+        page.wait_for_function('''p=>{const v=projection(p),m=document.querySelector('#cityMarker');
+          return Math.hypot(view.x+v[0]*view.s-parseFloat(m.style.left),view.y+v[1]*view.s-parseFloat(m.style.top))<.01;
+        }''',arg=[city['lon'],city['lat']],timeout=3000)
         xy=page.evaluate('p=>{const v=projection(p);return [view.x+v[0]*view.s,view.y+v[1]*view.s]}',[city['lon'],city['lat']])
         actual=page.locator('#cityMarker').evaluate('e=>[parseFloat(e.style.left),parseFloat(e.style.top)]')
         assert math.dist(xy,actual)<.01,(city['name'],xy,actual)

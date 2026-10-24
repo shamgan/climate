@@ -56,6 +56,7 @@ with sync_playwright() as p:
     def click(s):
         if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
         page.locator(s).click()
+        page.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))')
         if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def dock():
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')
@@ -153,6 +154,7 @@ with sync_playwright() as p:
     assert page.evaluate('atlasLearning.sceneProgress()')==0
     assert pixels()==startup_pixels and not page.evaluate('atlasNavigation.settings.borders')
     # Desert switch is independent and does not reset other map state.
+    click('#navWorld')
     before_desert=old_state();image=pixels();click('#desertBelt')
     assert old_state()==before_desert and pixels()!=image
     assert page.locator('#desertBelt').get_attribute('aria-pressed')=='true'

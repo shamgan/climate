@@ -37,6 +37,7 @@ with sync_playwright() as p:
     page.goto(url);page.wait_for_function('ready && window.atlasLearning')
     def click(s):
         page.locator(s).click()
+        page.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))')
         if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def dock(name):
         if not page.locator('#mapDrawer').is_visible():click('#openDrawer')

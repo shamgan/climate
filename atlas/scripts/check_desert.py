@@ -14,6 +14,7 @@ with sync_playwright() as p:
     def click(s):
         if s=='#atlasReset' and page.locator('#mapDrawer').evaluate("d=>d.matches(':modal')"):page.locator('#closeDrawer').click()
         page.locator(s).click()
+        page.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))')
         if s.startswith('[data-month=') or s.startswith('[data-field='):page.wait_for_function('document.querySelector("#layerStatus").hidden')
     def snapshot():return page.evaluate('JSON.stringify({state,climate:climateLayers.settings,learning:atlasLearning.settings})')
     def pixels():return page.locator('#map').evaluate('c=>c.toDataURL()')
@@ -23,6 +24,9 @@ with sync_playwright() as p:
         assert page.locator('#desertMapKey').is_visible()
     assert page.locator('#desertBelt').get_attribute('aria-pressed')=='false'
     assert page.evaluate('document.querySelector("#currentsControl").nextElementSibling.id')=='desertBelt'
+    # Use fixed whole-world framing to isolate overlay state from height-fit
+    # recalculation when its footer key changes the canvas height.
+    click('#navWorld')
     before=snapshot();image=pixels();click('#desertBelt');active()
     assert snapshot()==before and pixels()!=image
     # Inspect the rendered mask itself, including transparent ocean/steppe cells.
