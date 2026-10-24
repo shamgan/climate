@@ -1,0 +1,26 @@
+name: Build atlas city climatology
+on:
+  push:
+    branches: [atlas-city-climatology]
+    paths:
+      - atlas/scripts/build_city_climatology.py
+      - .github/workflows/build-atlas-city-climatology.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  city-climatology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - run: python -m pip install 'numpy>=2,<3' 'xarray>=2025,<2027' 'netCDF4>=1.7,<2'
+      - name: Extract verified twelve-month ERA5 city normals
+        run: python -u atlas/scripts/build_city_climatology.py
+      - name: Save city data on the isolated branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atlas/data/cities
+          git diff --cached --quiet || git commit -m "Add twenty city climatographs from original ERA5 monthly normals"
+          git push origin HEAD:atlas-city-climatology

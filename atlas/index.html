@@ -9,7 +9,7 @@ footer a{color:inherit}.subtitle{overflow-wrap:anywhere}.legend-items .legend-bt
 .learning-note{font-size:.78em;line-height:1.6;padding:10px 12px;background:#f1f5ef;border-radius:8px;color:#385c54}.legend-btn{overflow-wrap:anywhere;align-items:flex-start}.legend-btn .swatch{margin-top:2px}.map-head h2{line-height:1.5}.tooltip{max-width:min(420px,85vw);white-space:normal}.filter-label select{max-width:260px}.legend-items{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:800px){.legend-items{grid-template-columns:repeat(2,minmax(0,1fr))}.map-head h2{font-size:1rem}.filter-label select{max-width:220px}}
 .creator-credit{flex-basis:100%;text-align:center;font-size:.72rem;margin-top:6px}footer{flex-wrap:wrap}
 .latitude-labels{position:absolute;inset:0;pointer-events:none;z-index:2;direction:rtl}.latitude-label{position:absolute;transform:translateY(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;padding:3px 5px;border:1.5px solid #194e70;border-radius:5px;background:rgba(255,255,255,.96);color:#092f4c;font-weight:700;line-height:1.2;box-shadow:0 1px 4px #092f4c24}.equator-label{border-width:2px}.latitude-label bdi{font-weight:800}.map-tools,.map-options{z-index:3}
-</style><link rel="stylesheet" href="layers.css?v=20261023-2"><link rel="stylesheet" href="interface.css?v=20261023-4"><link rel="stylesheet" href="learning-layers.css?v=20261024-1"><link rel="stylesheet" href="navigation.css?v=20261024-1"></head>
+</style><link rel="stylesheet" href="layers.css?v=20261023-2"><link rel="stylesheet" href="interface.css?v=20261023-4"><link rel="stylesheet" href="learning-layers.css?v=20261024-1"><link rel="stylesheet" href="navigation.css?v=20261024-1"><link rel="stylesheet" href="cities.css?v=20261024-1"></head>
 <body>
 <a class="skip" href="#workspace">דילוג אל המפה</a>
 <header class="masthead"><div class="brand"><span class="brand-mark" aria-hidden="true">◎</span><div><span class="eyebrow">גיאוגרפיה · דרך המפה</span><h1>אטלס האקלים<span class="title-dot">.</span></h1></div></div><div class="header-actions"><button id="fontSize" aria-pressed="false" title="הגדלת הטקסט">A<span class="small-a">a</span></button><button id="project" aria-pressed="false">מצב הקרנה</button><button id="sources">מקורות ומידע ⓘ</button></div></header>
@@ -235,6 +235,7 @@ function draw(){
  climateLayers.drawAnnotations();
  $('#zoomIn').disabled=state.zoom>=6;$('#zoomOut').disabled=state.zoom<=1;
  window.atlasNavigation?.sync();
+ window.atlasCities?.drawMarker();
 }
 function hit(e){if(!ready)return 0;const rect=canvas.getBoundingClientRect();const x=Math.floor((e.clientX-rect.left-view.x)/view.s),y=Math.floor((e.clientY-rect.top-view.y)/view.s);return x>=0&&x<W&&y>=0&&y<H?grid[y*W+x]:0;}
 function showTooltip(e){
@@ -293,4 +294,4 @@ OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
---><script src="interface.js?v=20261024-1"></script><script src="solar-model.js?v=20261024-1"></script><script src="atmosphere-model.js?v=20261024-1"></script><script src="learning-layers.js?v=20261024-1"></script><script src="navigation.js?v=20261024-1"></script></body></html>
+--><script src="interface.js?v=20261024-1"></script><script src="solar-model.js?v=20261024-1"></script><script src="atmosphere-model.js?v=20261024-1"></script><script src="learning-layers.js?v=20261024-1"></script><script src="navigation.js?v=20261024-1"></script><script src="cities.js?v=20261024-1"></script></body></html>

@@ -7,7 +7,10 @@
     " window.atlasNavigation?.drawBorders();\n",
     " window.atlasNavigation?.drawNames();\n",
     " window.atlasNavigation?.sync();\n",
-    "<script src=\"navigation.js?v=20261024-1\"></script>"
+    "<script src=\"navigation.js?v=20261024-1\"></script>",
+    "<link rel=\"stylesheet\" href=\"cities.css?v=20261024-1\">",
+    " window.atlasCities?.drawMarker();\n",
+    "<script src=\"cities.js?v=20261024-1\"></script>"
   ],
   "assets": {
     "atmosphere-model.js": "6bf3d5e5c3e4986626a91764fded5d81fc75f2a3",
