@@ -7,7 +7,7 @@
     " window.atlasNavigation?.drawBorders();\n",
     " window.atlasNavigation?.drawNames();\n",
     " window.atlasNavigation?.sync();\n",
-    "<script src=\"navigation.js?v=20261024-4\"></script>",
+    "<script src=\"navigation.js?v=20261024-5\"></script>",
     "<link rel=\"stylesheet\" href=\"cities.css?v=20261024-2\">",
     " window.atlasCities?.drawMarker();\n",
     "<script src=\"cities.js?v=20261024-1\"></script>"

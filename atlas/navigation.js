@@ -6,7 +6,7 @@
  const settings={borders:false,names:true,desert:false};
  const initial={map:structuredClone(state),climate:structuredClone(climateLayers.settings),learning:structuredClone(atlasLearning.settings)};
  const shortcuts=document.createElement('section');shortcuts.className='navigation-shortcuts';
- shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>המילוי הוורוד מסמן את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא. המילוי משנה את הצבע המוצג; לצבעי הנתונים המקוריים כבו את המתג.</p>';
+ shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">אזורי מדבר</button><p id="desertBeltNote" class="control-hint" hidden>המילוי הוורוד מסמן את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא. המילוי משנה את הצבע המוצג; לצבעי הנתונים המקוריים כבו את המתג.</p>';
  q('#dockLayers').prepend(shortcuts);
  const controls=document.createElement('section');controls.className='navigation-controls';
  controls.innerHTML=`<h3>ניווט במפה</h3>
@@ -29,7 +29,7 @@
  let data=null,pending=null,error='',labelBoxes=[],desertRaster=null;
  const desertActive=()=>settings.desert;
  const desertKey=document.createElement('div');desertKey.id='desertMapKey';desertKey.className='desert-map-key';desertKey.hidden=true;
- desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>רצועת המדבריות העולמית · מילוי ורוד בולט</span>';
+ desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>אזורי מדבר · מילוי ורוד בולט</span>';
  q('.map-key').after(desertKey);
  function sync(){
   q('#navZoomIn').disabled=state.zoom>=6;q('#navZoomOut').disabled=state.zoom<=1;

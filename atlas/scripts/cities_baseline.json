@@ -26,7 +26,7 @@
     "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
     "learning-layers.js": "547ca81f5af72f0cc90753ace60a016a566942ca",
     "navigation.css": "acb050480559cb63292bfea7d75a5da8159a84ab",
-    "navigation.js": "c006bf8c023644c51d525ba7ef4396740142460a",
+    "navigation.js": "7c5c5b34e029b70cc246b81b1de28f0e08baa45a",
     "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
   },
   "htmlReplacements": [
@@ -35,7 +35,7 @@
       "navigation.css?v=20261024-1"
     ],
     [
-      "navigation.js?v=20261024-4",
+      "navigation.js?v=20261024-5",
       "navigation.js?v=20261024-1"
     ],
     [
@@ -54,5 +54,9 @@
   "desertColorRevision": {
     "baseline": "7c223caee76c0f8a9485a67afe98c74fbfc87b21",
     "changes": "Replace sparse desert hatching with prominent translucent pink fill and dark contour; same mask, state and stacking. Legend and blending note updated."
+  },
+  "desertNameRevision": {
+    "baseline": "1c55d268fb779a8376345e9760bc31962f4f0533",
+    "changes": "Rename the overlay button and legend to אזורי מדבר; no behavior or styling changes."
   }
 }
