@@ -7,7 +7,7 @@ baseline=json.loads((root/'scripts/navigation_baseline.json').read_text())
 def git_hash(data): return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
 for name,expected in baseline['assets'].items():
     assert git_hash((root/name).read_bytes())==expected, 'Changed pre-existing asset: '+name
-html=(root/'index.html').read_text(encoding='utf-8')
+html=(root/'index.html').read_bytes().decode('utf-8')
 for addition in baseline['htmlAdditions']:
     assert html.count(addition)==1, addition
     html=html.replace(addition,'')
