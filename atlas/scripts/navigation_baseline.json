@@ -25,7 +25,7 @@
     "data/terrain/elevation-01deg.bin.gz": "999e1dff1eb0612519a8afb8ae6ce2322a25a67b",
     "data/terrain/manifest.json": "98f3a08b2a82bb16991ab709b8cacabf06f12675",
     "data/terrain/preview-1deg.bin.gz": "af52931ea8feea9fcc00126b0a96a685402b041f",
-    "interface.css": "cfd286ba774ce3779a6c54743349b0082377e8ba",
+    "interface.css": "a8e42d513ce386ae9f0d1735c6d207735e6a927d",
     "interface.js": "fbfb0e317d0cd887a46b210ea9200bce7e883b35",
     "layers.css": "3fec97a96d72643bfe40a35f4bf7ed5689f012db",
     "layers.js": "936b564d2111997c10495befbba1417796c53389",
@@ -65,6 +65,10 @@
     [
       "learning-layers.js?v=20261024-6",
       "learning-layers.js?v=20261024-1"
+    ],
+    [
+      "  const labelMargin=(line.subtitle?26:16)*atlasTextScale();\n  if(yy<labelMargin||yy>cssH-labelMargin)return [];",
+      "  if(yy<48||yy>cssH-30)return [];"
     ]
   ],
   "fullscreenDisplayRevision": {

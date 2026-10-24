@@ -129,6 +129,12 @@ body.atlas-ui.large{--base:1rem;--atlas-text-scale:1.4;--dock-width:clamp(350px,
  .atlas-ui .city-map-label{font-size:calc(11px * var(--atlas-text-scale))}
 }
 @media(max-height:540px){
+ .atlas-ui .latitude-label{max-width:calc(50% - 10px);padding:1px 2px;border-width:1px;gap:3px;line-height:1;white-space:normal;justify-content:center;text-align:center}
+ .atlas-ui .latitude-label:not(.has-subtitle){flex-wrap:wrap;row-gap:0}
+ .atlas-ui .latitude-label.has-subtitle{transform:translateY(-50%);gap:0}
+ .atlas-ui .latitude-main{max-width:100%;gap:3px;line-height:1;justify-content:center}
+ .atlas-ui .latitude-subtitle{font-size:.8em;line-height:1.05}
+ .atlas-ui .latitude-label bdi{flex:none;white-space:nowrap}
  .atlas-ui .drawer-brand{padding-block:8px 5px}
  .atlas-ui .drawer-brand .eyebrow{display:none}
  .atlas-ui .drawer-brand h1{font-size:1.25rem}

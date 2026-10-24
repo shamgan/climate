@@ -8,7 +8,7 @@ preserved = {
     'layers.js':'936b564d2111997c10495befbba1417796c53389',
     'layers.css':'3fec97a96d72643bfe40a35f4bf7ed5689f012db',
     'currents.js':'f1aa87d81cd8fa8a9f1361cde68af62cf95369ce',
-    'interface.css':'cfd286ba774ce3779a6c54743349b0082377e8ba',
+    'interface.css':'a8e42d513ce386ae9f0d1735c6d207735e6a927d',
     'data/era5/manifest.json':'ec60e235304477f24a2386d379f94987300d2caa',
     'data/era5/temperature-01.bin.gz':'7e1065e6a47953b9a6ac872e4e53abfb75015dc4',
     'data/era5/temperature-07.bin.gz':'404e668939526521ee0cd45b1ffcbfdbde6e93af',

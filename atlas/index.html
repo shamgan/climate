@@ -188,7 +188,8 @@ function renderLatitudeLabels(){
  layer.style.fontSize=(cssW<480?9.5:cssW<720?11:13)+'px';
  layer.innerHTML=latitudeLines.flatMap(line=>{
   const yy=view.y+projection([0,line.lat])[1]*view.s;
-  if(yy<48||yy>cssH-30)return [];
+  const labelMargin=(line.subtitle?26:16)*atlasTextScale();
+  if(yy<labelMargin||yy>cssH-labelMargin)return [];
   const text='<span>'+ (cssW<600?line.short:line.name)+'</span><bdi dir="ltr">'+line.degrees+'</bdi>'+(line.direction?'<span>'+line.direction+'</span>':'');
   return ['left','right'].map(side=>'<div class="latitude-label '+(line.lat===0?'equator-label':'')+(line.subtitle?' has-subtitle':'')+'" style="'+side+':6px;top:'+yy+'px">'+(line.subtitle?'<span class="latitude-main">'+text+'</span><small class="latitude-subtitle">'+line.subtitle+'</small>':text)+'</div>');
  }).join('');

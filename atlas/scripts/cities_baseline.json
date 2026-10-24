@@ -20,14 +20,14 @@
     "data/terrain/elevation-01deg.bin.gz": "999e1dff1eb0612519a8afb8ae6ce2322a25a67b",
     "data/terrain/manifest.json": "98f3a08b2a82bb16991ab709b8cacabf06f12675",
     "data/terrain/preview-1deg.bin.gz": "af52931ea8feea9fcc00126b0a96a685402b041f",
-    "interface.css": "cfd286ba774ce3779a6c54743349b0082377e8ba",
+    "interface.css": "a8e42d513ce386ae9f0d1735c6d207735e6a927d",
     "interface.js": "fbfb0e317d0cd887a46b210ea9200bce7e883b35",
     "layers.css": "3fec97a96d72643bfe40a35f4bf7ed5689f012db",
     "layers.js": "936b564d2111997c10495befbba1417796c53389",
     "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
     "learning-layers.js": "184c1e60b2862f2425a48974439ac97be77188e5",
     "navigation.css": "d0f22cd969d474b6502825a3eefb3fd835354bd5",
-    "navigation.js": "1684d4bab469a0b0c3e7d14f8680c743294c7160",
+    "navigation.js": "fbe419f96d67ac01571ed67bc8ff8c6e6aead91d",
     "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
   },
   "htmlReplacements": [
@@ -74,6 +74,10 @@
     [
       "learning-layers.js?v=20261024-6",
       "learning-layers.js?v=20261024-1"
+    ],
+    [
+      "  const labelMargin=(line.subtitle?26:16)*atlasTextScale();\n  if(yy<labelMargin||yy>cssH-labelMargin)return [];",
+      "  if(yy<48||yy>cssH-30)return [];"
     ]
   ],
   "desertRevision": {

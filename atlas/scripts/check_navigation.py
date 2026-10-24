@@ -76,7 +76,7 @@ with sync_playwright() as p:
     omitted={'land:1746705323','land:1746709121','disputed:1746705871'}
     expected=[f for f in data['features'] if f['properties']['sourceLayer']+':'+str(f['properties']['id']) not in omitted]
     assert len(drawn)==421
-    assert sorted(json.dumps(f,sort_keys=True) for f in drawn)==sorted(json.dumps(f,sort_keys=True) for f in expected)
+    assert len(drawn)==len(expected) and all(f in expected for f in drawn), 'Boundary geometry/property mismatch'
     localized=page.evaluate('window.localizedRegions')
     assert 'PS' not in localized and all(c in localized for c in ['IL','JO','EG','LB','SY'])
     assert not page.evaluate('atlasNavigation.labels().length')

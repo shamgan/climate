@@ -162,6 +162,20 @@ with sync_playwright() as p:
             assert stage['y']<=1 and canvas['y']<=1
             page.evaluate('window.scrollTo(0,1000)');assert page.evaluate('scrollY')==0
             if width==1280 and height==720 and closed: shot('width-fixed-desktop')
+    # Portrait and short landscape keep every latitude label legible in both text modes.
+    for width,height in [(844,390),(390,844),(320,568)]:
+        page.set_viewport_size({'width':width,'height':height})
+        for large in [False,True]:
+            if page.evaluate('document.body.classList.contains("large")')!=large:
+                dock('layers');click('#fontSize')
+            if page.locator('#mapDrawer').is_visible():click('#closeDrawer')
+            page.wait_for_timeout(80)
+            assert page.locator('.latitude-label').count()==10
+            boxes=page.locator('.latitude-label').evaluate_all('es=>es.map(e=>{const r=e.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]})')
+            for i,a in enumerate(boxes):
+                for b in boxes[i+1:]:
+                    assert not (a[0]<b[2] and a[2]>b[0] and a[1]<b[3] and a[3]>b[1]),(width,height,large,a,b)
+            assert page.evaluate('document.scrollingElement.scrollHeight<=innerHeight+1 && document.scrollingElement.scrollWidth<=innerWidth')
     print('WIDTH_CHECKS_PASSED: 7 screen sizes, drawer open/closed, full frame width, symmetric borders, all latitude labels, no document scroll, top-aligned full viewport map')
     assert not errors,errors
     print('BROWSER_CHECKS_PASSED: map-first desktop/mobile layout; no controls over canvas; drawer, keyboard tabs, Escape, modal focus; climate legends, comparison, inquiry; actual ERA5 values; 29 currents; months, zoom, labels, font size, sources, retry; no runtime errors')

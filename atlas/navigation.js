@@ -115,7 +115,7 @@
   if(state.labels)for(const [lon,lat] of [[-104,47],[-60,-16],[20,51],[21,4],[92,44],[135,-26],[0,-80]]){
    const p=projection([lon,lat]),x=p[0]*view.s+view.x,y=p[1]*view.s+view.y;taken.push([x-58,y-11,x+58,y+11]);
   }
-  if(state.latitudes)for(const line of latitudeLines){const y=projection([0,line.lat])[1]*view.s+view.y;if(y<48||y>cssH-30)continue;const width=(cssW<600?150:205)*atlasTextScale();const bottom=y+(line.subtitle?34:15)*atlasTextScale();taken.push([0,y-15,width,bottom],[cssW-width,y-15,cssW,bottom]);}
+  if(state.latitudes)for(const line of latitudeLines){const y=projection([0,line.lat])[1]*view.s+view.y;const labelMargin=(line.subtitle?26:16)*atlasTextScale();if(y<labelMargin||y>cssH-labelMargin)continue;const width=(cssW<600?150:205)*atlasTextScale();const bottom=y+(line.subtitle?34:15)*atlasTextScale();taken.push([0,y-15,width,bottom],[cssW-width,y-15,cssW,bottom]);}
   for(const label of data.labels){
    if(!label.name||!Number.isFinite(label.lon)||!Number.isFinite(label.lat))continue;
    const p=projection([label.lon,label.lat]);if(!p)continue;
