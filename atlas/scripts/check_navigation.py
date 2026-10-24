@@ -100,8 +100,8 @@ with sync_playwright() as p:
       const out={};for(const code of [4,5,6,7,1,15]){
         outer:for(let y=30;y<H-30;y+=3)candidate:for(let x=30;x<W-30;x+=3){
           if(grid[y*W+x]!==code)continue;
-          for(const [dx,dy] of [[-6,0],[6,0],[0,-6],[0,6]])if(grid[(y+dy)*W+x+dx]!==code)continue candidate;
-          const sx=Math.round((view.x+x*view.s)*canvas.width/cssW),sy=Math.round((view.y+y*view.s)*canvas.height/cssH);
+          for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++)if(grid[(y+dy)*W+x+dx]!==code)continue candidate;
+          const dpr=Math.min(devicePixelRatio||1,2),sx=Math.round((view.x+x*view.s)*dpr),sy=Math.round((view.y+y*view.s)*dpr);
           out[code]=Array.from(ctx.getImageData(sx,sy,1,1).data).slice(0,3);break outer;
         }
       }return out;
