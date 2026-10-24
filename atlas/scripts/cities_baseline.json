@@ -2,7 +2,7 @@
   "commit": "c54db25781a47b3067869e2adac73fcff4052928",
   "htmlBlob": "abea67a247473c174a862197a323be1c5f7685f2",
   "htmlAdditions": [
-    "<link rel=\"stylesheet\" href=\"cities.css?v=20261024-1\">",
+    "<link rel=\"stylesheet\" href=\"cities.css?v=20261024-2\">",
     " window.atlasCities?.drawMarker();\n",
     "<script src=\"cities.js?v=20261024-1\"></script>"
   ],
@@ -25,8 +25,26 @@
     "layers.js": "936b564d2111997c10495befbba1417796c53389",
     "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
     "learning-layers.js": "547ca81f5af72f0cc90753ace60a016a566942ca",
-    "navigation.css": "5448f978edc7fd6d1b99a177a37ff5edccd8cd11",
-    "navigation.js": "7bff58682486b55af653a887c53da05328f333d8",
+    "navigation.css": "4b48027d2594b151fb70183ae9a4499523f370d0",
+    "navigation.js": "dbfce59fbe315175b5bbaa7bdb2ab96233ccb45a",
     "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
+  },
+  "htmlReplacements": [
+    [
+      "navigation.css?v=20261024-2",
+      "navigation.css?v=20261024-1"
+    ],
+    [
+      "navigation.js?v=20261024-2",
+      "navigation.js?v=20261024-1"
+    ],
+    [
+      " window.atlasLearning?.draw();\n window.atlasNavigation?.drawBorders();\n climateLayers.drawCurrents();\n window.atlasNavigation?.drawDesert();",
+      " window.atlasNavigation?.drawDesert();\n window.atlasLearning?.draw();\n window.atlasNavigation?.drawBorders();\n climateLayers.drawCurrents();"
+    ]
+  ],
+  "desertRevision": {
+    "baseline": "63ef92ab0608c3dff67d6f329592e1478b8c7c2c",
+    "changes": "Independent desert overlay switch and draw order; navigation asset hashes updated only for this requested revision."
   }
 }

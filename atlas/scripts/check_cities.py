@@ -6,11 +6,14 @@ baseline=json.loads((root/'scripts/cities_baseline.json').read_text())
 def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
 for name,sha in baseline['assets'].items():assert blob((root/name).read_bytes())==sha,name
 html=(root/'index.html').read_bytes().decode()
+for current,original in baseline.get('htmlReplacements',[]):
+    assert html.count(current)==1,current
+    html=html.replace(current,original)
 for a in baseline['htmlAdditions']:
     assert html.count(a)==1,a
     html=html.replace(a,'')
 assert blob(html.encode())==baseline['htmlBlob']
-print('CITY_PRESERVATION_PASSED: all existing layer assets and original HTML preserved exactly apart from three additive integration fragments',flush=True)
+print('CITY_PRESERVATION_PASSED: existing layer assets and original HTML preserved apart from recorded city integration and requested desert overlay changes',flush=True)
 data=json.loads((root/'data/cities/climatology.json').read_text(encoding='utf-8'))
 assert data['period']=='1991-2020' and data['months']==list(range(1,13)) and len(data['cities'])==20
 assert len({c['id'] for c in data['cities']})==20

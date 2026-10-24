@@ -6,7 +6,7 @@
  const settings={borders:false,names:true,desert:false};
  const initial={map:structuredClone(state),climate:structuredClone(climateLayers.settings),learning:structuredClone(atlasLearning.settings)};
  const shortcuts=document.createElement('section');shortcuts.className='navigation-shortcuts';
- shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>מוצגים רק סוגי האקלים המדברי BWh ו־BWk מתוך המפה הקיימת, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית.</p>';
+ shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>הפסים מסמנים את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא.</p>';
  q('#dockLayers').prepend(shortcuts);
  const controls=document.createElement('section');controls.className='navigation-controls';
  controls.innerHTML=`<h3>ניווט וגבולות מדינות</h3>
@@ -24,12 +24,14 @@
   </div>`;
  q('#dockLayers .display-settings').before(controls);
  let data=null,pending=null,error='',labelBoxes=[],desertRaster=null;
- const desertActive=()=>settings.desert&&state.view==='detail'&&state.tab==='explore'&&state.selected===4&&!climateLayers.settings.field;
+ const desertActive=()=>settings.desert;
+ const desertKey=document.createElement('div');desertKey.id='desertMapKey';desertKey.className='desert-map-key';desertKey.hidden=true;
+ desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>רצועת המדבריות העולמית · סימון מפוספס</span>';
+ q('.map-key').after(desertKey);
  function sync(){
   q('#navZoomIn').disabled=state.zoom>=6;q('#navZoomOut').disabled=state.zoom<=1;
   q('#navZoomValue').value=Math.round(state.zoom*100)+'%';
-  if(settings.desert&&!desertActive())settings.desert=false;
-  q('#desertBelt').setAttribute('aria-pressed',desertActive());q('#desertBeltNote').hidden=!desertActive();
+  q('#desertBelt').setAttribute('aria-pressed',desertActive());q('#desertBeltNote').hidden=!desertActive();desertKey.hidden=!desertActive();
   q('#bordersToggle').setAttribute('aria-pressed',settings.borders);
   q('#borderOptions').hidden=!settings.borders;
   const status=q('#borderStatus');status.hidden=!settings.borders||(!pending&&!error);
@@ -54,8 +56,17 @@
   if(!desertActive())return;
   if(!desertRaster){
    desertRaster=document.createElement('canvas');desertRaster.width=W;desertRaster.height=H;
-   const c=desertRaster.getContext('2d'),im=c.createImageData(W,H),rgb=parseInt(item(4).color.slice(1),16);
-   for(let i=0;i<grid.length;i++){if(!grid[i])continue;const k=i*4,on=grid[i]===4||grid[i]===5;im.data[k]=on?rgb>>16:232;im.data[k+1]=on?(rgb>>8)&255:236;im.data[k+2]=on?rgb&255:231;im.data[k+3]=255;}
+   const c=desertRaster.getContext('2d'),im=c.createImageData(W,H);
+   const isDesert=i=>grid[i]===4||grid[i]===5;
+   // Mark only the existing desert cells. Transparent spaces keep the field
+   // colors readable; coasts, oceans and steppe cells are never repainted.
+   for(let i=0;i<grid.length;i++){
+    if(!isDesert(i))continue;const k=i*4,x=i%W,y=Math.floor(i/W);
+    const edge=x===0||x===W-1||y===0||y===H-1||!isDesert(i-1)||!isDesert(i+1)||!isDesert(i-W)||!isDesert(i+W);
+    const hatch=(x+y)%14<2;
+    if(!edge&&!hatch)continue;
+    im.data[k]=edge?100:125;im.data[k+1]=edge?65:78;im.data[k+2]=edge?12:14;im.data[k+3]=edge?235:200;
+   }
    c.putImageData(im,0,0);
   }
   ctx.drawImage(desertRaster,0,0);
@@ -73,10 +84,8 @@
   render();atlasInterface.open('layers');if(innerWidth<=900)atlasInterface.close();
   q('#mapTitle').scrollIntoView({block:'nearest'});
  }
- function showDeserts(){
-  stopLearning();climateLayers.clearField();Object.assign(climateLayers.settings,{currents:false,current:'',point:null});
-  Object.assign(state,{view:'detail',tab:'explore',selected:4,group:'all',tour:-1,zoom:1,panX:0,panY:0,a:1,b:4});settings.desert=true;
-  render();atlasInterface.open('layers');if(innerWidth<=900)atlasInterface.close();q('#mapTitle').scrollIntoView({block:'nearest'});
+ function showDeserts(enabled=true){
+  settings.desert=Boolean(enabled);sync();draw();
  }
  function drawBorders(){
   if(!settings.borders||!data)return;
@@ -121,7 +130,7 @@
   q('#tooltip').hidden=true;draw();
  }
  q('#navZoomIn').onclick=()=>zoomAt(1.3);q('#navZoomOut').onclick=()=>zoomAt(1/1.3);q('#navWorld').onclick=()=>reset();
- q('#atlasReset').onclick=fullReset;q('#desertBelt').onclick=showDeserts;
+ q('#atlasReset').onclick=fullReset;q('#desertBelt').onclick=()=>showDeserts(!settings.desert);
  q('#bordersToggle').onclick=()=>{settings.borders=!settings.borders;if(settings.borders)loadData();sync();draw();};
  q('#countryNames').onchange=e=>{settings.names=e.target.checked;draw();};
  canvas.addEventListener('wheel',e=>{

@@ -1,5 +1,3 @@
-.atlas-ui #currentsControl+#desertBelt{display:block;width:100%;margin-top:9px;min-height:44px;text-align:right;border-color:#c4a15a;background:#fbf5e6;color:#5e471f;font-size:.85rem;transition:none}
-.atlas-ui #currentsControl+#desertBelt[aria-pressed=true]{background:#755923;color:#fff}
 .city-card{border:1px solid #d9e4dd;border-radius:12px;padding:13px;margin:0 0 18px;background:#fafcf9;min-width:0}
 .city-card h3{font-size:1.04rem;margin:0 0 6px;line-height:1.4}
 .city-card p{font-size:.78rem;line-height:1.55;margin:7px 0}

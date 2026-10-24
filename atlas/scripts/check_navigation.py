@@ -89,26 +89,13 @@ with sync_playwright() as p:
     click('#atlasReset');assert old_state()==before
     assert page.evaluate('atlasLearning.sceneProgress()')==0
     assert pixels()==original and not page.evaluate('atlasNavigation.settings.borders')
-    # Desert shortcut uses only existing BWh/BWk pixels, never the steppe codes.
-    click('#desertBelt')
-    assert page.evaluate('state.view==="detail" && state.selected===4 && state.zoom===1')
+    # Desert switch is independent and does not reset other map state.
+    before_desert=old_state();image=pixels();click('#desertBelt')
+    assert old_state()==before_desert and pixels()!=image
     assert page.locator('#desertBelt').get_attribute('aria-pressed')=='true'
     assert 'ערבות' in page.locator('#desertBeltNote').inner_text()
     shot('navigation-desert-belt')
-    page.evaluate('()=>{state.labels=false;state.latitudes=false;draw()}')
-    samples=page.evaluate('''()=>{
-      const out={};for(const code of [4,5,6,7,1,15]){
-        outer:for(let y=30;y<H-30;y+=3)candidate:for(let x=30;x<W-30;x+=3){
-          if(grid[y*W+x]!==code)continue;
-          for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++)if(grid[(y+dy)*W+x+dx]!==code)continue candidate;
-          const dpr=Math.min(devicePixelRatio||1,2),sx=Math.round((view.x+x*view.s)*dpr),sy=Math.round((view.y+y*view.s)*dpr);
-          out[code]=Array.from(ctx.getImageData(sx,sy,1,1).data).slice(0,3);break outer;
-        }
-      }return out;
-    }''')
-    assert len(samples)>=4,samples
-    for code,rgb in samples.items():assert rgb==([239,195,91] if int(code) in [4,5] else [232,236,231]),(code,rgb)
-    page.locator('#clear').evaluate('b=>b.click()');assert not page.evaluate('atlasNavigation.settings.desert')
+    page.locator('#clear').evaluate('b=>b.click()');assert page.evaluate('atlasNavigation.settings.desert')
     click('#atlasReset');assert old_state()==before and pixels()==original
     # Actual touch dispatch, not synthetic JS PointerEvents. Pinch must not select a climate.
     mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
@@ -134,9 +121,9 @@ with sync_playwright() as p:
     mp.locator('.drawer-scroll').evaluate('e=>e.scrollTop=e.scrollHeight')
     mp.screenshot(path=str(root/'navigation-mobile-menu.png'),full_page=True)
     mp.locator('#navWorld').click();assert mp.evaluate('state.zoom===1 && state.panX===0 && state.panY===0')
-    mp.locator('#desertBelt').click();assert not mp.locator('#mapDrawer').is_visible()
-    assert mp.evaluate('state.selected')==4
-    mp.locator('#openDrawer').click();mp.locator('#atlasReset').click();assert not mp.locator('#mapDrawer').is_visible()
+    mp.locator('#desertBelt').click();assert mp.locator('#mapDrawer').is_visible()
+    assert mp.evaluate('atlasNavigation.settings.desert')
+    mp.locator('#atlasReset').click();assert not mp.locator('#mapDrawer').is_visible()
     assert mp.evaluate('state.view==="major" && state.selected===0 && state.zoom===1 && !atlasNavigation.settings.borders')
     mp.screenshot(path=str(root/'navigation-mobile-map.png'),full_page=True)
     assert mp.locator('#mapStage button').count()==0
@@ -147,6 +134,6 @@ with sync_playwright() as p:
     assert retry.locator('#layerStatus').is_hidden()
     retry.unroute('**/data/boundaries/countries.json*');retry.locator('#retryBorders').click();retry.wait_for_function('atlasNavigation.ready()')
     assert not errors,errors
-    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; existing layers combined; full reset; desert-only classification excludes steppe; mobile/menu/keyboard; retry; no runtime errors',flush=True)
+    print('NAVIGATION_CHECKS_PASSED: optional/lazy boundary overlay; exact pixel and state restoration; shared zoom controls; wheel point anchoring; mouse pan; actual touch pinch and drag without selection; non-overlapping Hebrew country labels; existing layers combined; full reset; independent desert switch; mobile/menu/keyboard; retry; no runtime errors',flush=True)
     browser.close()
 server.shutdown()

@@ -31,10 +31,12 @@ jobs:
           node atlas/scripts/check_atmosphere.cjs
       - name: Check additive teaching layers and preserve existing layers
         run: python -u atlas/scripts/check_learning.py
-      - name: Check navigation, boundaries, reset and desert-only view
+      - name: Check navigation, boundaries, reset and desert switch
         run: python -u atlas/scripts/check_navigation.py
       - name: Check city climatologies, climographs and selected-city markers
         run: python -u atlas/scripts/check_cities.py
+      - name: Check persistent desert overlay on all map layers
+        run: python -u atlas/scripts/check_desert.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
