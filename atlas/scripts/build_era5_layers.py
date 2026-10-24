@@ -1,79 +1,181 @@
-"""Build real 0.25-degree ERA5 monthly normals from World Bank CCKP public data."""
-import gzip, hashlib, json, pathlib, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+"""Extend the atlas with all 12 real ERA5 monthly normals, preserving old frames."""
+import copy
+import gzip
+import hashlib
+import json
+import pathlib
+import tempfile
+import urllib.request
+
 import numpy as np
 import xarray as xr
 
-ROOT=pathlib.Path(__file__).resolve().parents[1]
-OUT=ROOT/'data'/'era5'
-OUT.mkdir(parents=True,exist_ok=True)
-BASE='https://wbg-cckp.s3.us-west-2.amazonaws.com/'
-NS={'s':'http://s3.amazonaws.com/doc/2006-03-01/'}
-def discover(variable):
-    keys=[];token=None
-    while True:
-        query={'list-type':'2','prefix':f'data/era5-x0.25/{variable}/','max-keys':'1000'}
-        if token:query['continuation-token']=token
-        with urllib.request.urlopen(BASE+'?'+urllib.parse.urlencode(query),timeout=90) as response:root=ET.fromstring(response.read())
-        keys.extend(n.text for n in root.findall('s:Contents/s:Key',NS))
-        token=root.findtext('s:NextContinuationToken',default=None,namespaces=NS)
-        if not token:break
-    print('CATALOG_SAMPLE',variable,len(keys),json.dumps(keys[:35]),flush=True)
-    if not keys:
-        with urllib.request.urlopen(BASE+'?list-type=2&delimiter=%2F',timeout=90) as response:top=ET.fromstring(response.read())
-        print('CATALOG_ROOT',[n.text for n in top.findall('s:CommonPrefixes/s:Prefix',NS)],flush=True)
-    selected=[k for k in keys if k.endswith('_climatology_mean_1991-2020.nc') and k.split('/')[-1].startswith(f'climatology-{variable}-monthly-')]
-    print('CANDIDATES',variable,json.dumps(selected),flush=True)
-    assert len(selected)==1, f'Expected exactly one monthly climatology, got {selected}'
-    return selected[0]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "data" / "era5"
+MONTHS = tuple(range(1, 13))
+BASE_MONTHS = (1, 7)
+PERIOD = "1991\u20132020"
+EXPECTED_SOURCES = {
+    "temperature": "450df4fded6bbbe63d7a73e1f6394058acdb91ce5cea1865752aba6bdc898996",
+    "precipitation": "804178402ccce6231e9815df6abbf0fabda223626d396f0cc570657b07b6f09f",
+}
 
-manifest={'schemaVersion':2,'period':'1991–2020','months':[1,7],'provider':'World Bank CCKP / Copernicus ECMWF ERA5','providerUrl':'https://climateknowledgeportal.worldbank.org/index.php/metadata','gridStepDegrees':0.25,'encoding':'unsigned uint16 little endian, gzip; 65535 means no data; value = encoded * scale + offset','scale':0.1,'layers':{}}
-for name,variable in [('temperature','tas'),('precipitation','pr')]:
-    key=discover(variable);url=BASE+key;source=OUT/(variable+'.source.nc')
-    print('SOURCE_URL',url,flush=True)
-    urllib.request.urlretrieve(url,source)
-    with xr.open_dataset(source,decode_times=False) as ds:
-        print('DATASET_METADATA',json.dumps({'variables':{k:{'dims':list(v.dims),'shape':list(v.shape),'attrs':{a:str(b) for a,b in v.attrs.items()}} for k,v in ds.data_vars.items()},'coords':{k:{'shape':list(v.shape),'first':str(v.values.flat[0]),'last':str(v.values.flat[-1]),'attrs':{a:str(b) for a,b in v.attrs.items()}} for k,v in ds.coords.items()},'attrs':{k:str(v) for k,v in ds.attrs.items()}},ensure_ascii=True),flush=True)
-        assert ds.attrs.get('wb_period_label')=='1991-2020'
-        candidates=[k for k,v in ds.data_vars.items() if k.startswith(f'climatology-{variable}-monthly-') and v.ndim==3]
-        assert len(candidates)==1,candidates
-        assert np.array_equal(xr.decode_cf(ds).time.dt.month.values,np.arange(1,13)), 'Month order must be January to December'
-        a=ds[candidates[0]].squeeze(drop=True)
-        latdim=next(d for d in a.dims if d.lower() in ('lat','latitude'))
-        londim=next(d for d in a.dims if d.lower() in ('lon','longitude'))
-        timedim=next(d for d in a.dims if d not in (latdim,londim))
-        assert a.sizes[timedim]==12
-        a=a.transpose(timedim,latdim,londim)
-        lats=np.asarray(a[latdim],dtype=float);lons=(np.asarray(a[londim],dtype=float)+180)%360-180
-        lati=np.argsort(lats)[::-1];loni=np.argsort(lons);lats=lats[lati];lons=lons[loni]
-        assert np.allclose(np.diff(lats),-.25,atol=1e-5) and np.allclose(np.diff(lons),.25,atol=1e-5)
-        assert len(lons)==1440 and len(lats) in (720,721)
-        units=str(a.attrs.get('units','')).lower().replace(' ','')
-        layer={'name':'ERA5 '+variable,'unit':'°C' if name=='temperature' else 'mm/month','scale':.1,'offset':-100 if name=='temperature' else 0,'latitudes':lats.tolist(),'longitudes':lons.tolist(),'sourceUrl':url,'sourceSha256':hashlib.sha256(source.read_bytes()).hexdigest(),'originalUnits':a.attrs.get('units'),'sourceAttributes':{k:str(v) for k,v in a.attrs.items()},'frames':{}}
-        for month in (1,7):
-            values=np.asarray(a.isel({timedim:month-1}),dtype=np.float64)[np.ix_(lati,loni)]
-            if name=='temperature':
-                if units in ('k','kelvin','degk'):values-=273.15;conversion='Kelvin minus 273.15'
-                else:
-                    assert units in ('c','°c','degc','celsius','degree_celsius','degrees_celsius','degreesc','degreec'),units
-                    conversion='Source already in degrees Celsius'
-                assert -100<float(np.nanmin(values)) and float(np.nanmax(values))<65
-            else:
-                if units in ('mm','mm/month','mmmonth-1'):conversion='Source monthly total in mm, no daily-to-monthly multiplication'
-                elif units in ('mm/day','mmday-1','mmd-1'):values*=31;conversion='Mean mm/day multiplied by 31 days'
-                elif units in ('kgm-2s-1','kg/m2/s'):values*=31*86400;conversion='kg/m2/s multiplied by 86400 seconds and 31 days'
-                else:raise ValueError('Unverified precipitation unit '+units)
-                assert float(np.nanmin(values))>=-0.01 and float(np.nanmax(values))<6000
-                values=np.maximum(values,0)
-            valid=np.isfinite(values)
-            assert valid.mean()>.98, 'Unexpected land-only or incomplete source grid'
-            quantized=np.rint((values[valid]-layer['offset'])*10)
-            assert quantized.min()>=0 and quantized.max()<65535
-            encoded=np.full(values.shape,65535,dtype='<u2');encoded[valid]=quantized.astype('<u2')
-            packed=gzip.compress(encoded.tobytes(),compresslevel=9,mtime=0)
-            filename=f'{name}-{month:02}.bin.gz';(OUT/filename).write_bytes(packed)
-            layer['frames'][str(month)]={'url':'data/era5/'+filename,'sha256':hashlib.sha256(packed).hexdigest(),'bytes':len(packed),'minimum':round(float(np.nanmin(values)),2),'maximum':round(float(np.nanmax(values)),2),'validCells':int(valid.sum())}
-        layer['conversion']=conversion;manifest['layers'][name]=layer
-    source.unlink()
-    print('PREPARED',name,json.dumps(layer['frames']),flush=True)
-(OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':'))+'\n',encoding='utf-8')
-print('ERA5_BUILD_COMPLETE',flush=True)
+
+def sha256(content):
+    return hashlib.sha256(content).hexdigest()
+
+
+def encode(values, offset):
+    valid = np.isfinite(values)
+    assert valid.mean() > .98, "Unexpected land-only or incomplete grid"
+    quantized = np.rint((values[valid] - offset) * 10)
+    assert quantized.min() >= 0 and quantized.max() < 65535
+    result = np.full(values.shape, 65535, dtype="<u2")
+    result[valid] = quantized.astype("<u2")
+    return result, int(valid.sum())
+
+
+def read_existing_frame(layer, month, shape):
+    frame = layer["frames"][str(month)]
+    relative = pathlib.PurePosixPath(frame["url"])
+    assert relative.parts[:2] == ("data", "era5") and ".." not in relative.parts
+    path = ROOT.joinpath(*relative.parts)
+    packed = path.read_bytes()
+    assert len(packed) == frame["bytes"], f"Incomplete existing frame {path}"
+    assert sha256(packed) == frame["sha256"], f"Changed existing frame {path}"
+    raw = gzip.decompress(packed)
+    assert len(raw) == int(np.prod(shape)) * 2
+    return frame, packed, np.frombuffer(raw, dtype="<u2").reshape(shape)
+
+
+def validate_city_values(encoded, layer, cities, variable, month):
+    matches = 0
+    for city in cities:
+        assert len(city[variable]) == 12, city["id"]
+        lon_index = int(round((city["gridLon"] - layer["longitudes"][0]) / .25)) % 1440
+        lat_index = int(round((layer["latitudes"][0] - city["gridLat"]) / .25))
+        assert abs(layer["longitudes"][lon_index] - city["gridLon"]) < 1e-8
+        assert abs(layer["latitudes"][lat_index] - city["gridLat"]) < 1e-8
+        actual = int(encoded[lat_index, lon_index])
+        expected = int(np.rint((city[variable][month - 1] - layer["offset"]) * 10))
+        assert actual == expected, (city["id"], variable, month, actual, expected)
+        matches += 1
+    return matches
+
+
+def build():
+    original = json.loads((OUT / "manifest.json").read_text(encoding="utf-8"))
+    assert original["schemaVersion"] == 2
+    assert original["period"] == PERIOD and original["gridStepDegrees"] == .25
+    assert set(original["months"]) in ({1, 7}, set(MONTHS))
+    manifest = copy.deepcopy(original)
+    manifest["months"] = list(MONTHS)
+    city_data = json.loads((ROOT / "data/cities/climatology.json").read_text(encoding="utf-8"))
+    assert city_data["period"] == "1991-2020"
+    assert city_data["gridStepDegrees"] == .25
+    cities = city_data["cities"]
+    assert len(cities) == 20
+    city_matches = 0
+    published = {}
+    source_bytes = {}
+    with tempfile.TemporaryDirectory(prefix="atlas-era5-") as temporary:
+        for name, variable in (("temperature", "tas"), ("precipitation", "pr")):
+            previous = original["layers"][name]
+            assert previous["sourceSha256"] == EXPECTED_SOURCES[name]
+            assert previous["scale"] == .1 and previous["offset"] == (-100 if name == "temperature" else 0)
+            url = previous["sourceUrl"]
+            assert url.startswith("https://wbg-cckp.s3.us-west-2.amazonaws.com/data/era5-x0.25/")
+            assert url.endswith("_climatology_mean_1991-2020.nc")
+            source = pathlib.Path(temporary) / (variable + ".nc")
+            print("SOURCE_URL", url, flush=True)
+            with urllib.request.urlopen(url, timeout=180) as response, source.open("wb") as output:
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+            source_bytes[name] = source.stat().st_size
+            assert sha256(source.read_bytes()) == EXPECTED_SOURCES[name], "Upstream bytes changed; review before rebuilding"
+            print("SOURCE_VERIFIED", name, source_bytes[name], EXPECTED_SOURCES[name], flush=True)
+
+            with xr.open_dataset(source, decode_times=False) as ds:
+                assert ds.attrs.get("wb_period_label") == "1991-2020"
+                candidates = [key for key, value in ds.data_vars.items()
+                              if key.startswith(f"climatology-{variable}-monthly-") and value.ndim == 3]
+                assert len(candidates) == 1, candidates
+                assert np.array_equal(xr.decode_cf(ds).time.dt.month.values, np.arange(1, 13))
+                a = ds[candidates[0]].squeeze(drop=True)
+                latdim = next(dim for dim in a.dims if dim.lower() in ("lat", "latitude"))
+                londim = next(dim for dim in a.dims if dim.lower() in ("lon", "longitude"))
+                timedim = next(dim for dim in a.dims if dim not in (latdim, londim))
+                assert a.sizes[timedim] == 12
+                a = a.transpose(timedim, latdim, londim)
+                latitudes = np.asarray(a[latdim], dtype=float)
+                longitudes = (np.asarray(a[londim], dtype=float) + 180) % 360 - 180
+                lati, loni = np.argsort(latitudes)[::-1], np.argsort(longitudes)
+                latitudes, longitudes = latitudes[lati], longitudes[loni]
+                assert len(longitudes) == 1440 and len(latitudes) == 721
+                assert np.allclose(np.diff(latitudes), -.25, atol=1e-8)
+                assert np.allclose(np.diff(longitudes), .25, atol=1e-8)
+                assert np.array_equal(latitudes, previous["latitudes"])
+                assert np.array_equal(longitudes, previous["longitudes"])
+                # These pinned sources already use Celsius and monthly totals.
+                # Reject different units instead of guessing a day conversion.
+                units = str(a.attrs.get("units", "")).lower().replace(" ", "")
+                assert units == ("degc" if name == "temperature" else "mm"), units
+                assert str(a.attrs.get("units")) == previous["originalUnits"]
+                layer = manifest["layers"][name]
+                layer["frames"] = {}
+
+                for month in MONTHS:
+                    values = np.asarray(a.isel({timedim: month - 1}), dtype=np.float64)[np.ix_(lati, loni)]
+                    low, high = float(np.nanmin(values)), float(np.nanmax(values))
+                    if name == "temperature":
+                        assert -100 < low <= high < 65
+                    else:
+                        assert -.01 <= low <= high < 6000
+                        values = np.maximum(values, 0)
+                    encoded, count = encode(values, layer["offset"])
+                    city_matches += validate_city_values(encoded, layer, cities, name, month)
+                    filename = f"{name}-{month:02}.bin.gz"
+                    if month in BASE_MONTHS:
+                        frame, packed, existing = read_existing_frame(previous, month, values.shape)
+                        assert np.array_equal(encoded, existing), f"Original {name} month {month} data changed"
+                        assert frame["validCells"] == count
+                        assert frame["minimum"] == round(float(np.nanmin(values)), 2)
+                        assert frame["maximum"] == round(float(np.nanmax(values)), 2)
+                        # Retain gzip bytes and metadata exactly, independently of Python/zlib version.
+                        layer["frames"][str(month)] = copy.deepcopy(frame)
+                    else:
+                        packed = gzip.compress(encoded.tobytes(), compresslevel=9, mtime=0)
+                        assert gzip.decompress(packed) == encoded.tobytes()
+                        layer["frames"][str(month)] = {
+                            "url": "data/era5/" + filename,
+                            "sha256": sha256(packed),
+                            "bytes": len(packed),
+                            "minimum": round(float(np.nanmin(values)), 2),
+                            "maximum": round(float(np.nanmax(values)), 2),
+                            "validCells": count,
+                        }
+                    published[filename] = packed
+                    print("MONTH_VERIFIED", name, month, json.dumps(layer["frames"][str(month)]), flush=True)
+
+    assert city_matches == 480, city_matches
+    assert len(published) == 24
+    # Keep every pre-existing manifest property intact except the months/frames expansion.
+    preserved = copy.deepcopy(manifest)
+    preserved["months"] = original["months"]
+    for name in manifest["layers"]:
+        preserved["layers"][name]["frames"] = original["layers"][name]["frames"]
+    assert preserved == original
+    for name in manifest["layers"]:
+        assert list(manifest["layers"][name]["frames"]) == [str(m) for m in MONTHS]
+    for filename, packed in published.items():
+        if "-01." not in filename and "-07." not in filename:
+            (OUT / filename).write_bytes(packed)
+    (OUT / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    print("ERA5_ALL_MONTHS_PASSED: 24 genuine monthly frames; four original frames and metadata unchanged; 480 city values matched", flush=True)
+    print("DOWNLOAD_BYTES", json.dumps(source_bytes), flush=True)
+    print("PUBLISHED_FRAME_BYTES", sum(map(len, published.values())), flush=True)
+
+
+if __name__ == "__main__":
+    build()
