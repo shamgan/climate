@@ -248,3 +248,21 @@ body.atlas-ui.large{--base:1rem;--atlas-text-scale:1.4;--dock-width:clamp(350px,
 @media(prefers-reduced-motion:reduce){.atlas-ui .map-drawer{scroll-behavior:auto}}
 @media print{.atlas-ui .sheet-handle,.atlas-ui #monthControl{display:none!important}}
 
+/* The mobile timeline and numeric scale stay visible as one compact footer. */
+@media(max-width:900px){
+ .atlas-ui .map-summary{max-height:none;overflow:visible;flex:0 0 auto}
+ .atlas-ui .map-key:has(.compact-field){display:block;padding:3px 10px 2px;min-height:0}
+ .atlas-ui .map-key:has(.compact-field) .key-link,.atlas-ui .scale-period,.atlas-ui .compact-currents .current-map-caption{display:none}
+ .atlas-ui .compact-field .scale-caption{line-height:1.2;margin:0 0 3px;white-space:nowrap}
+ .atlas-ui .compact-currents{gap:3px 9px;padding:3px 10px;line-height:1.25}
+ .atlas-ui .compact-currents .current-line{width:17px}
+ .atlas-ui .map-summary #monthControl{padding-block:3px}
+ .atlas-ui .map-summary .month-buttons{row-gap:2px}
+ .atlas-ui #monthPlaybackStatus{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.2em;line-height:1.2}
+ .atlas-ui .map-foot .selection-info{flex:0 1 auto;padding-inline:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:600px){
+ .atlas-ui .map-key:has(.compact-field) .field-ticks{margin-top:3px}
+ .atlas-ui .map-key:has(.compact-field) .field-ticks:has(.scale-endpoint){height:4em}
+}
+

@@ -140,8 +140,11 @@ function createClimateLayers({getMap,refresh,focus}) {
   if($('#playMonths')){$('#playMonths').textContent=playing?'❚❚':'▶';$('#playMonths').setAttribute('aria-label',playing?'עצירת מעבר בין חודשי השנה':'הנפשת חודשי השנה');$('#playMonths').title=playing?'עצירה':'ניגון לאורך השנה';}
   const status=$('#monthPlaybackStatus');
   if(status){status.textContent=months[settings.month]+(settings.field&&!frameReady(settings.field,settings.month)?' · '+(error?'הטעינה נכשלה':'טוען נתונים…'):playing?' · ניגון חודשי':settings.field?' · 1991–2020':settings.currents?' · המחשה עונתית':'');status.classList.toggle('month-load-error',!!error);}
+  requestAnimationFrame(ensureMonthInView);
+ }
+ function ensureMonthInView(){
   const track=$('.month-track'),selected=track?.querySelector('[data-month="'+settings.month+'"]');
-  if(track&&selected){const r=track.getBoundingClientRect(),b=selected.getBoundingClientRect();if(r.width>0)track.scrollBy({left:b.left<r.left?b.left-r.left:b.right>r.right?b.right-r.right:0,behavior:'instant'});}
+  if(track&&selected){const r=track.getBoundingClientRect(),b=selected.getBoundingClientRect();if(r.width>0)track.scrollBy({left:b.left<r.left+2?b.left-r.left-2:b.right>r.right-2?b.right-r.right+2:0,behavior:'instant'});}
  }
  function palette(){
   if(palettes.has(settings.field))return palettes.get(settings.field);
@@ -336,6 +339,7 @@ function createClimateLayers({getMap,refresh,focus}) {
  const monthButtons=$('.month-buttons');
  monthButtons.setAttribute('aria-label','בחירת חודש והנפשה');
  monthButtons.innerHTML='<button id="playMonths" type="button" aria-pressed="false" aria-label="הנפשת חודשי השנה" title="ניגון לאורך השנה">▶</button><div class="month-track" role="group" aria-label="חודשי השנה">'+Object.entries(months).map(([m,name])=>'<button type="button" data-month="'+m+'" aria-label="'+name+'" title="'+name+'" aria-pressed="'+(Number(m)===settings.month)+'">'+monthShort[Number(m)-1]+'</button>').join('')+'</div><span id="monthPlaybackStatus" role="status" aria-live="polite"></span>';
+  if(window.ResizeObserver)new ResizeObserver(ensureMonthInView).observe(monthButtons.querySelector('.month-track'));
  $('#playMonths').onclick=()=>playing?pausePlayback():startPlayback();
  document.querySelectorAll('[data-field]').forEach(b=>b.onclick=()=>{pausePlayback(false);settings.field=b.dataset.field;clearHover();loadData();refresh();});
  document.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>setMonth(b.dataset.month));
