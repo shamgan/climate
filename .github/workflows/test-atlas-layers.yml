@@ -26,17 +26,22 @@ jobs:
       - name: Check monthly layers and responsive interactions
         run: python -u atlas/scripts/check_interface.py
       - name: Check new solar and circulation models
+        if: ${{ !cancelled() }}
         run: |
           node atlas/scripts/check_solar.cjs
           node atlas/scripts/check_atmosphere.cjs
           node atlas/scripts/check_places.cjs
       - name: Check additive teaching layers and preserve existing layers
+        if: ${{ !cancelled() }}
         run: python -u atlas/scripts/check_learning.py
       - name: Check navigation, boundaries, reset and desert switch
+        if: ${{ !cancelled() }}
         run: python -u atlas/scripts/check_navigation.py
       - name: Check city climatologies, climographs and selected-city markers
+        if: ${{ !cancelled() }}
         run: python -u atlas/scripts/check_cities.py
       - name: Check persistent desert overlay on all map layers
+        if: ${{ !cancelled() }}
         run: python -u atlas/scripts/check_desert.py
       - uses: actions/upload-artifact@v4
         if: always()

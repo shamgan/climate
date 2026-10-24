@@ -81,7 +81,7 @@ with sync_playwright() as p:
     click('#currentsToggle');click('[data-field="precipitation"]');active()
     page.locator('#desertBelt').scroll_into_view_if_needed()
     page.screenshot(path=str(root/'desert-mobile-switch.png'),full_page=True)
-    click('#applyDrawer');active()
+    click('#closeDrawer');active()
     page.screenshot(path=str(root/'desert-mobile-map.png'),full_page=True)
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     click('#openDrawer');click('#desertBelt')
