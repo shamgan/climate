@@ -1,0 +1,4 @@
+interface:
+  display_name: "מפות אקלים אינטראקטיביות"
+  short_description: "בניית מפות אקלים, שכבות וחוויית הוראה בעברית"
+  default_prompt: "Use $build-interactive-climate-maps to build or revise a Hebrew teaching map while preserving its existing layers and verifying the published result."
