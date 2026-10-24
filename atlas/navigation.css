@@ -2,6 +2,7 @@
 .navigation-shortcuts{border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:15px}
 .navigation-shortcuts h3{font-size:.9rem;margin:0 0 9px}
 .navigation-shortcuts button{width:100%;text-align:right;margin-bottom:7px;font-size:.87rem;min-height:44px}
+.navigation-shortcuts button,.navigation-controls button{transition:none}
 .navigation-shortcuts #desertBelt{border-color:#c4a15a;background:#fbf5e6;color:#5e471f}
 .navigation-shortcuts #desertBelt[aria-pressed=true]{background:#755923;color:#fff}
 .navigation-controls h3{font-size:.9rem;margin:0 0 10px}

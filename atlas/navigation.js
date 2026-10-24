@@ -11,7 +11,7 @@
  const controls=document.createElement('section');controls.className='navigation-controls';
  controls.innerHTML=`<h3>ניווט וגבולות מדינות</h3>
   <div class="navigation-zoom" role="group" aria-label="הגדלה והקטנה של המפה">
-   <button id="navZoomOut" aria-label="הקטנת המפה">−</button><output id="navZoomValue" aria-label="שיעור הגדלת המפה">100%</output><button id="navZoomIn" aria-label="הגדלת המפה">＋</button>
+   <button id="navZoomOut" aria-label="הקטנת המפה">−</button><output id="navZoomValue" aria-label="שיעור הגדלת המפה">100%</output><button id="navZoomIn" aria-label="הגדלת המפה">+</button>
   </div><button id="navWorld" class="navigation-world">חזרה למפת העולם</button>
   <p class="control-hint">במחשב: גלגלת להגדלה וגרירה לתזוזה. בטלפון: צביטה בשתי אצבעות. במקלדת: מיקוד במפה, ‎+ / − וחצים.</p>
   <button id="bordersToggle" class="navigation-borders" aria-pressed="false" aria-controls="borderOptions"><span aria-hidden="true">▱</span><span>גבולות מדינות</span><span class="navigation-check" aria-hidden="true">✓</span></button>
