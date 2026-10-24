@@ -105,6 +105,14 @@
   "uiReviewBaseCommit": "03a423d9f8944692b4328a2515a191f15a283ba8",
   "uiReviewReplacements": [
     [
+      "<title>מפת האקלים | גיאוגרפיה דרך המפה</title>",
+      "<title>אטלס האקלים | גיאוגרפיה דרך המפה</title>"
+    ],
+    [
+      "<h1>מפת האקלים<span class=\"title-dot\">.</span></h1>",
+      "<h1>אטלס האקלים<span class=\"title-dot\">.</span></h1>"
+    ],
+    [
       "de:avoid}.explorer{break-inside:avoid;margin-bottom:20px}.panel{min-height:0}.legend-items{grid-template-columns:repeat(4,1fr)}}\n\n.show-all{background:#e2edda;color:#254b35;border:1px solid #c2d4b7;font-size:.84rem;font-weight:700;white-space:nowrap}.detail-bar{display:flex;gap:14px;align-items:center;padding:0 22px 13px;font-size:.78rem;color:var(--muted)}.detail-toggle{display:flex;gap:3px;padding:3px;background:#eff3ec;border-radius:10px}.detail-toggle button{font-size:.8rem;padding:6px 14px;min-height:36px;border:0;background:transparent}.detail-toggle button[aria-pressed=true]{background:var(--ink);color:white}.show-all:hover{background:#d3e5c8}@media(max-width:800px){.detail-bar{padding:0 12px 10px;gap:8px;flex-wrap:wrap}.detail-toggle button{font-size:.73rem;padding:6px 10px}.show-all{font-size:.72rem;padding:7px 9px}.map-head{gap:7px}}\n\nfooter a{color:inherit}.subtitle{overflow-wrap:anywhere}.legend-items .legend-btn{min-height:46px}.comparison .swatch{vertical",
       "de:avoid}.explorer{break-inside:avoid;margin-bottom:20px}.panel{min-height:0}.legend-items{grid-template-columns:repeat(4,1fr)}}\r\n\r\n.show-all{background:#e2edda;color:#254b35;border:1px solid #c2d4b7;font-size:.84rem;font-weight:700;white-space:nowrap}.detail-bar{display:flex;gap:14px;align-items:center;padding:0 22px 13px;font-size:.78rem;color:var(--muted)}.detail-toggle{display:flex;gap:3px;padding:3px;background:#eff3ec;border-radius:10px}.detail-toggle button{font-size:.8rem;padding:6px 14px;min-height:36px;border:0;background:transparent}.detail-toggle button[aria-pressed=true]{background:var(--ink);color:white}.show-all:hover{background:#d3e5c8}@media(max-width:800px){.detail-bar{padding:0 12px 10px;gap:8px;flex-wrap:wrap}.detail-toggle button{font-size:.73rem;padding:6px 10px}.show-all{font-size:.72rem;padding:7px 9px}.map-head{gap:7px}}\r\n\nfooter a{color:inherit}.subtitle{overflow-wrap:anywhere}.legend-items .legend-btn{min-height:46px}.comparison .swatch{vertical"
     ],
