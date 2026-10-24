@@ -33,7 +33,10 @@ with sync_playwright() as p:
         else if(a[i*4+3])counts.outside++;
       }return counts;
     }''')
-    assert mask['outside']==0 and all(n>0 for g in ['marked','clear'] for n in mask[g].values()),mask
+    assert mask['outside']==0 and all(n>0 for n in mask['marked'].values()),mask
+    assert all(n==0 for n in mask['clear'].values()), 'Desert cells must have continuous fill, not sparse hatching'
+    assert 'מילוי ורוד בולט' in page.locator('#desertMapKey').inner_text()
+    assert 'לצבעי הנתונים המקוריים כבו את המתג' in page.locator('#desertBeltNote').inner_text()
     click('#desertBelt');assert snapshot()==before and pixels()==image
     # Same switch track as ocean currents, with keyboard support.
     def switch_style(selector):return page.locator(selector).evaluate('e=>{const s=getComputedStyle(e,"::after");return [s.width,s.height,s.backgroundColor,s.boxShadow]}')
@@ -81,6 +84,6 @@ with sync_playwright() as p:
     assert not page.evaluate('atlasNavigation.settings.desert')
     assert page.evaluate('climateLayers.settings.field==="precipitation" && climateLayers.settings.currents')
     assert not errors,errors
-    print('DESERT_OVERLAY_PASSED: independent reversible switch; exact BWh/BWk-only transparent mask; both ERA5 fields and months; currents, teaching overlays and city preserved; camera and selection persistence; full reset; matching switch appearance; keyboard and mobile',flush=True)
+    print('DESERT_OVERLAY_PASSED: independent reversible switch; continuous BWh/BWk-only color fill with transparent non-desert cells; both ERA5 fields and months; currents, teaching overlays and city preserved; camera and selection persistence; full reset; matching switch appearance; keyboard and mobile',flush=True)
     browser.close()
 server.shutdown()

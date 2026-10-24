@@ -2,12 +2,12 @@
   "commit": "6fcabcbcc42a88d9c07edd23b96ccd4581e6dfc8",
   "htmlBlob": "824848d13da4694b0a55b389f8ef3f64bd1df145",
   "htmlAdditions": [
-    "<link rel=\"stylesheet\" href=\"navigation.css?v=20261024-3\">",
+    "<link rel=\"stylesheet\" href=\"navigation.css?v=20261024-4\">",
     " window.atlasNavigation?.drawDesert();\n",
     " window.atlasNavigation?.drawBorders();\n",
     " window.atlasNavigation?.drawNames();\n",
     " window.atlasNavigation?.sync();\n",
-    "<script src=\"navigation.js?v=20261024-3\"></script>",
+    "<script src=\"navigation.js?v=20261024-4\"></script>",
     "<link rel=\"stylesheet\" href=\"cities.css?v=20261024-2\">",
     " window.atlasCities?.drawMarker();\n",
     "<script src=\"cities.js?v=20261024-1\"></script>"

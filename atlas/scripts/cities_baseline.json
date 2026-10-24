@@ -25,17 +25,17 @@
     "layers.js": "936b564d2111997c10495befbba1417796c53389",
     "learning-layers.css": "edfd8297952adb189b1e5f2cc2dfc8fe4a601fba",
     "learning-layers.js": "547ca81f5af72f0cc90753ace60a016a566942ca",
-    "navigation.css": "747b1c281bdbbf5fbf02f26921bf8b0f5483719f",
-    "navigation.js": "447d734ba7cffa0dd5878604169641757e5f8dbf",
+    "navigation.css": "acb050480559cb63292bfea7d75a5da8159a84ab",
+    "navigation.js": "c006bf8c023644c51d525ba7ef4396740142460a",
     "solar-model.js": "80fa9f1aa770d0b730dac56f17eb91b9438737f2"
   },
   "htmlReplacements": [
     [
-      "navigation.css?v=20261024-3",
+      "navigation.css?v=20261024-4",
       "navigation.css?v=20261024-1"
     ],
     [
-      "navigation.js?v=20261024-3",
+      "navigation.js?v=20261024-4",
       "navigation.js?v=20261024-1"
     ],
     [
@@ -50,5 +50,9 @@
   "bordersRevision": {
     "baseline": "9e795a1e48d380eea256fe1b5018c4142a061470",
     "changes": "Move boundaries into Adds to map with shared switch styling; draw boundaries above desert marking. Boundary dataset and independent state unchanged."
+  },
+  "desertColorRevision": {
+    "baseline": "7c223caee76c0f8a9485a67afe98c74fbfc87b21",
+    "changes": "Replace sparse desert hatching with prominent translucent pink fill and dark contour; same mask, state and stacking. Legend and blending note updated."
   }
 }

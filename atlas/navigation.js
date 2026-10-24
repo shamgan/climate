@@ -6,7 +6,7 @@
  const settings={borders:false,names:true,desert:false};
  const initial={map:structuredClone(state),climate:structuredClone(climateLayers.settings),learning:structuredClone(atlasLearning.settings)};
  const shortcuts=document.createElement('section');shortcuts.className='navigation-shortcuts';
- shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>הפסים מסמנים את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא.</p>';
+ shortcuts.innerHTML='<h3>תצוגות מהירות</h3><button id="atlasReset" title="כל אזורי האקלים במפת העולם, ללא שכבות נוספות">↺ איפוס מלא</button><button id="desertBelt" aria-pressed="false" aria-describedby="desertBeltNote">רצועת המדבריות העולמית</button><p id="desertBeltNote" class="control-hint" hidden>המילוי הוורוד מסמן את אזורי האקלים המדברי BWh ו־BWk במפה, ללא ערבות. נכללים גם מדבריות קרים שמחוץ לרצועה הסובטרופית. הסימון נשאר מעל כל שכבה עד לכיבוי המתג או לאיפוס מלא. המילוי משנה את הצבע המוצג; לצבעי הנתונים המקוריים כבו את המתג.</p>';
  q('#dockLayers').prepend(shortcuts);
  const controls=document.createElement('section');controls.className='navigation-controls';
  controls.innerHTML=`<h3>ניווט במפה</h3>
@@ -29,7 +29,7 @@
  let data=null,pending=null,error='',labelBoxes=[],desertRaster=null;
  const desertActive=()=>settings.desert;
  const desertKey=document.createElement('div');desertKey.id='desertMapKey';desertKey.className='desert-map-key';desertKey.hidden=true;
- desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>רצועת המדבריות העולמית · סימון מפוספס</span>';
+ desertKey.innerHTML='<span class="desert-swatch" aria-hidden="true"></span><span>רצועת המדבריות העולמית · מילוי ורוד בולט</span>';
  q('.map-key').after(desertKey);
  function sync(){
   q('#navZoomIn').disabled=state.zoom>=6;q('#navZoomOut').disabled=state.zoom<=1;
@@ -61,14 +61,12 @@
    desertRaster=document.createElement('canvas');desertRaster.width=W;desertRaster.height=H;
    const c=desertRaster.getContext('2d'),im=c.createImageData(W,H);
    const isDesert=i=>grid[i]===4||grid[i]===5;
-   // Mark only the existing desert cells. Transparent spaces keep the field
-   // colors readable; coasts, oceans and steppe cells are never repainted.
+   // Fill every existing desert cell with a prominent translucent color.
+   // Oceans and steppe cells remain transparent; map values are unchanged.
    for(let i=0;i<grid.length;i++){
     if(!isDesert(i))continue;const k=i*4,x=i%W,y=Math.floor(i/W);
     const edge=x===0||x===W-1||y===0||y===H-1||!isDesert(i-1)||!isDesert(i+1)||!isDesert(i-W)||!isDesert(i+W);
-    const hatch=(x+y)%14<2;
-    if(!edge&&!hatch)continue;
-    im.data[k]=edge?100:125;im.data[k+1]=edge?65:78;im.data[k+2]=edge?12:14;im.data[k+3]=edge?235:200;
+    im.data[k]=edge?118:224;im.data[k+1]=0;im.data[k+2]=edge?76:156;im.data[k+3]=edge?255:190;
    }
    c.putImageData(im,0,0);
   }

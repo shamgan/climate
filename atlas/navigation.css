@@ -22,6 +22,6 @@
 .atlas-ui :is(#desertBelt,#bordersToggle):after{content:'';flex:none;width:34px;height:20px;border-radius:20px;background:#b7c5bc;box-shadow:inset -15px 0 0 -3px #fff;border:2px solid #b7c5bc}
 .atlas-ui :is(#desertBelt,#bordersToggle)[aria-pressed=true]{border-color:#5b8c71;background:#eef5ef}
 .atlas-ui :is(#desertBelt,#bordersToggle)[aria-pressed=true]:after{background:#367255;border-color:#367255;box-shadow:inset 15px 0 0 -3px #fff}
-.desert-map-key{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #e7ede8;background:#fff;font-size:.75rem;color:#4b3a22}
+.desert-map-key{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #e7ede8;background:#fff;font-size:.75rem;color:#76004c}
 .desert-map-key[hidden]{display:none!important}
-.desert-swatch{flex:none;width:26px;height:16px;border:1px solid #64410c;border-radius:2px;background:repeating-linear-gradient(135deg,#7d4e0e 0 2px,transparent 2px 8px)}
+.desert-swatch{flex:none;width:26px;height:16px;border:1px solid #76004c;border-radius:2px;background:rgba(224,0,156,.745)}
